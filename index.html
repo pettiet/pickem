@@ -105,6 +105,7 @@
   .sheet .p{font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:.03em}
   .sheet .p.ok{color:var(--win)}
   .sheet .p.bad{color:var(--loss);text-decoration:line-through;text-decoration-thickness:2px}
+  .sheet .p.bad.none{text-decoration:none;font-family:var(--body);font-size:11px;font-weight:600;color:var(--loss)}
   .sheet .p.hid{color:var(--lock);font-family:var(--body);font-size:11px;font-weight:500}
   .sheet .p.none{color:var(--line)}
   .sheet tfoot td{font-family:var(--display);font-size:18px;font-weight:800;background:#F4F6F3}
@@ -287,7 +288,12 @@
   }
 
   // ── grading ──────────────────────────────────────────────────────────────
-  const grade = (g, pick) => !pick ? null : !g.completed || isVoid(g) || !g.winner ? "pending" : g.winner === pick ? "ok" : "bad";
+  // House rule: everyone picks every game. No pick on a finished game = a loss.
+  const grade = (g, pick) => {
+    if (isVoid(g)) return null;
+    if (!pick) return locked(g) ? (g.completed ? "bad" : "pending") : null;
+    return !g.completed || !g.winner ? "pending" : g.winner === pick ? "ok" : "bad";
+  };
 
   function tally(week) {
     const out = {};
@@ -338,8 +344,10 @@
     if (!games.length) { v.appendChild(el("div", "empty", "<b>No games yet</b>ESPN hasn't posted this week's schedule.")); return; }
     const t = tally(S.week)[S.player];
     const openCount = games.filter(g => !isVoid(g)).length;
+    const made = games.filter(g => !isVoid(g) && S.picks[S.week]?.[key(g.id, S.player)]).length;
+    const left = games.filter(g => !isVoid(g) && !locked(g) && !S.picks[S.week]?.[key(g.id, S.player)]).length;
     const prog = el("div", "progress");
-    prog.innerHTML = `<b>${t.picked}<span style="color:var(--mute)">/${openCount}</span></b><div class="bar"><i style="width:${openCount ? 100 * t.picked / openCount : 0}%"></i></div><span>${esc(S.player)}'s picks${t.ok + t.bad ? ` · <b style="font-size:15px">${t.ok}–${t.bad}</b> so far` : ""}</span>`;
+    prog.innerHTML = `<b>${made}<span style="color:var(--mute)">/${openCount}</span></b><div class="bar"><i style="width:${openCount ? 100 * made / openCount : 0}%"></i></div><span>${esc(S.player)}${left ? ` · <b style="font-size:15px;color:var(--loss)">${left}</b> still open` : " · all set"}${t.ok + t.bad ? ` · <b style="font-size:15px">${t.ok}–${t.bad}</b>` : ""}</span>`;
     v.appendChild(prog);
 
     let lastDay = null;
@@ -364,7 +372,7 @@
       let badge = "";
       if (gr === "ok") badge = `<span class="grade ok">✓ Correct</span>`;
       else if (gr === "bad") badge = `<span class="grade bad">✗ Missed</span>`;
-      else if (locked(g) && !mine) badge = `<span class="grade lock">No pick</span>`;
+      else if (locked(g) && !mine) badge = `<span class="grade ${g.completed ? "bad" : "lock"}">✗ No pick</span>`;
       else if (locked(g)) badge = `<span class="grade lock">Locked</span>`;
       card.appendChild(el("div", "meta", `<span class="st ${stCls}">${stTxt}</span>${badge}`));
       v.appendChild(card);
@@ -385,7 +393,7 @@
         const pk = S.picks[S.week]?.[key(g.id, p)];
         const hide = C.HIDE_PICKS_UNTIL_KICKOFF && p !== S.player && !locked(g);
         let cls = "p", txt = "—";
-        if (!pk) cls += " none";
+        if (!pk) { const gr = grade(g, pk); cls += gr === "bad" ? " bad" : " none"; if (gr === "bad") txt = "none"; }
         else if (hide) { cls += " hid"; txt = "hidden"; }
         else { txt = pk === g.home.id ? g.home.abbr : g.away.abbr; const gr = grade(g, pk); if (gr === "ok") cls += " ok"; if (gr === "bad") cls += " bad"; }
         tr.appendChild(el("td", cls, esc(txt)));
@@ -437,7 +445,7 @@
     });
     tb.appendChild(body);
     v.appendChild(tb);
-    v.appendChild(el("p", "note", "Correct picks count 1 point each. Ties for a week's best count as a week won for everyone tied."));
+    v.appendChild(el("p", "note", "Correct picks count 1 point each. A game left unpicked counts as a loss. Ties for a week's best count as a week won for everyone tied."));
   }
 
   function render() {
