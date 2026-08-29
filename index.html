@@ -198,6 +198,8 @@
   let toastT;
   const toast = (msg, err) => { const t = $("#toast"); t.textContent = msg; t.className = "toast show" + (err ? " err" : ""); clearTimeout(toastT); toastT = setTimeout(() => t.className = "toast", 1800); };
   const key = (g, p) => `${g}|${p}`;
+  const WEEK0_END = new Date(C.WEEK0_END || `${C.SEASON}-09-01T00:00:00`);   // first moment of "real" Week 1
+  const dbWeek = n => n === 0 ? 1 : n;   // ESPN (and the database) count Week 0 as part of Week 1
   const locked = g => g.state !== "pre";           // kicked off, live, final, or postponed
   const isVoid = g => /CANCEL|POSTPONE|FORFEIT/i.test(g.statusName) && !g.completed;
   const idealText = hex => { const n = parseInt(hex, 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (r*299 + g*587 + b*114) / 1000 > 165 ? "#12211A" : "#fff"; };
@@ -229,15 +231,25 @@
   async function loadWeek(n, force) {
     const stale = Date.now() - (S.fetchedAt[n] || 0) > 120000;
     if (S.games[n] && !stale && !force) return S.games[n];
-    const url = `${ESPN}?groups=${C.ESPN_GROUP}&seasontype=2&week=${n}&dates=${C.SEASON}&limit=500`;
+    const url = `${ESPN}?groups=${C.ESPN_GROUP}&seasontype=2&week=${dbWeek(n)}&dates=${C.SEASON}&limit=500`;
     const r = await fetch(url);
     if (!r.ok) throw new Error("ESPN " + r.status);
     const j = await r.json();
     if (!S.calendar.length) {
       const reg = (j.leagues?.[0]?.calendar || []).find(x => x.value === "2") || {};
       S.calendar = (reg.entries || []).map(e => ({ n: +e.value, label: e.label, detail: e.detail, start: new Date(e.startDate), end: new Date(e.endDate) }));
+      // ESPN files the "Week 0" games under Week 1. Split them out for display.
+      const w1 = S.calendar.find(w => w.n === 1);
+      if (w1 && WEEK0_END > w1.start && WEEK0_END < w1.end) {
+        const fd = d => d.toLocaleDateString([], { month: "short", day: "numeric" });
+        S.calendar.unshift({ n: 0, label: "Week 0", detail: `${fd(w1.start)}–${fd(new Date(WEEK0_END - 1))}`, start: w1.start, end: new Date(WEEK0_END - 1) });
+        w1.start = WEEK0_END; w1.detail = `${fd(WEEK0_END)}–${fd(w1.end)}`;
+      }
     }
-    S.games[n] = (j.events || []).map(normalize).sort((a, b) => a.date - b.date);
+    let evs = (j.events || []).map(normalize);
+    if (n === 0) evs = evs.filter(g => g.date < WEEK0_END);
+    else if (n === 1 && S.calendar[0]?.n === 0) evs = evs.filter(g => g.date >= WEEK0_END);
+    S.games[n] = evs.sort((a, b) => a.date - b.date);
     S.fetchedAt[n] = Date.now();
     return S.games[n];
   }
@@ -257,7 +269,7 @@
 
   async function loadPicks(week) {
     if (!configured) { S.picks[week] = S.picks[week] || {}; return; }
-    const r = await sb(`picks?season=eq.${C.SEASON}&week=eq.${week}&select=game_id,player,pick`);
+    const r = await sb(`picks?season=eq.${C.SEASON}&week=eq.${dbWeek(week)}&select=game_id,player,pick`);
     if (!r.ok) throw new Error("Supabase " + r.status);
     const rows = await r.json();
     const m = {};
@@ -275,7 +287,7 @@
     try {
       const r = await sb("picks?on_conflict=season,week,game_id,player", {
         method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-        body: JSON.stringify({ season: C.SEASON, week, game_id: gameId, player: S.player, pick: teamId }),
+        body: JSON.stringify({ season: C.SEASON, week: dbWeek(week), game_id: gameId, player: S.player, pick: teamId }),
       });
       if (!r.ok) throw new Error(await r.text());
       toast("Saved");
