@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12211A">
+<title>The Sheet · College Football Pick'em</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="config.js"></script>
+<style>
+  :root{
+    --field:#EEF1EC;      /* misty turf */
+    --ink:#12211A;        /* deep green-black */
+    --ink-2:#3D4F45;
+    --mute:#74847B;
+    --line:#D6DDD6;
+    --card:#FFFFFF;
+    --flag:#F2B705;       /* goalpost yellow */
+    --win:#1F8A4C;
+    --loss:#C0392B;
+    --lock:#9AA69F;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(18,33,26,.06),0 6px 20px rgba(18,33,26,.06);
+    --display:"Barlow Condensed",Impact,sans-serif;
+    --body:"Inter",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--field);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+  button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--flag);outline-offset:2px}
+  .app{max-width:760px;margin:0 auto;padding:0 14px calc(28px + env(safe-area-inset-bottom))}
+
+  /* ── header ─────────────────────────────── */
+  header{padding:18px 0 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+  .brand h1{font-family:var(--display);font-weight:800;font-size:44px;line-height:.9;margin:0;letter-spacing:-.01em;text-transform:uppercase}
+  .brand h1 span{color:var(--flag);-webkit-text-stroke:1.5px var(--ink);color:transparent}
+  .brand .eyebrow{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
+  .who{display:flex;gap:6px}
+  .who button{padding:8px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:600;font-size:14px;color:var(--ink-2)}
+  .who button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  /* ── week bar ───────────────────────────── */
+  .weekbar{display:flex;align-items:center;justify-content:space-between;background:var(--ink);color:#fff;border-radius:var(--radius);padding:6px 6px;margin:6px 0 10px;box-shadow:var(--shadow)}
+  .weekbar button{width:44px;height:44px;border-radius:10px;font-size:22px;display:grid;place-items:center;color:#fff}
+  .weekbar button:disabled{opacity:.25;cursor:default}
+  .weekbar button:not(:disabled):hover{background:rgba(255,255,255,.1)}
+  .weekbar .w{text-align:center}
+  .weekbar .w b{font-family:var(--display);font-weight:800;font-size:28px;text-transform:uppercase;letter-spacing:.02em;line-height:1;display:block}
+  .weekbar .w small{font-size:12px;color:rgba(255,255,255,.65);display:block;margin-top:2px}
+
+  /* ── tabs ───────────────────────────────── */
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#E2E7E1;padding:4px;border-radius:12px;margin-bottom:12px}
+  .tabs button{padding:10px 0;border-radius:9px;font-weight:600;color:var(--ink-2);font-size:14px}
+  .tabs button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+
+  /* ── progress ───────────────────────────── */
+  .progress{display:flex;align-items:center;gap:12px;margin:2px 2px 12px;font-size:13px;color:var(--ink-2)}
+  .progress .bar{flex:1;height:6px;border-radius:3px;background:#DDE3DC;overflow:hidden}
+  .progress .bar i{display:block;height:100%;background:var(--flag);width:0;transition:width .3s}
+  .progress b{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:.02em}
+
+  /* ── day groups & game cards ────────────── */
+  .day{margin:18px 0 8px;display:flex;align-items:baseline;gap:10px}
+  .day h2{font-family:var(--display);font-weight:700;font-size:22px;text-transform:uppercase;letter-spacing:.04em;margin:0}
+  .day span{font-size:12px;color:var(--mute);font-weight:500}
+  .game{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:8px;overflow:hidden}
+  .matchup{display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch}
+  .team{display:flex;align-items:center;gap:10px;padding:12px 10px;text-align:left;position:relative;transition:background .15s,color .15s;min-height:66px}
+  .team img{width:36px;height:36px;object-fit:contain;flex:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.15))}
+  .team .n{min-width:0;flex:1}
+  .team .rk{font-size:11px;font-weight:600;color:var(--mute);letter-spacing:.04em}
+  .team .nm{font-family:var(--display);font-weight:700;font-size:19px;line-height:1.05;letter-spacing:.01em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .team .rec{font-size:11px;color:var(--mute)}
+  .team .sc{font-family:var(--display);font-weight:800;font-size:30px;line-height:1;min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
+  .team.home{flex-direction:row-reverse;text-align:right}
+  .team.home .sc{text-align:left}
+  .team.picked{color:#fff}
+  .team.picked .rk,.team.picked .rec{color:rgba(255,255,255,.75)}
+  .team.picked .nm::after{content:"✓";margin-left:6px;font-size:14px;vertical-align:middle}
+  .team.home.picked .nm::after{content:"";margin:0}
+  .team.home.picked .nm::before{content:"✓";margin-right:6px;font-size:14px;vertical-align:middle}
+  .team.dim{opacity:.55}
+  .team:disabled{cursor:default}
+  .team:not(:disabled):hover{background:#F4F6F3}
+  .team.picked:not(:disabled):hover{filter:brightness(1.08);background:var(--tc)}
+  .at{display:grid;place-items:center;font-family:var(--display);font-weight:700;color:var(--mute);font-size:14px;padding:0 4px;letter-spacing:.06em}
+  .meta{display:flex;justify-content:space-between;align-items:center;padding:7px 12px;border-top:1px solid #EEF1EC;font-size:12px;color:var(--mute)}
+  .meta .st{font-weight:600}
+  .meta .st.live{color:var(--loss)}
+  .meta .st.final{color:var(--ink-2)}
+  .meta .grade{font-weight:700;font-size:12px;padding:2px 8px;border-radius:999px}
+  .grade.ok{background:#DDF3E5;color:var(--win)}
+  .grade.bad{background:#F9E1DD;color:var(--loss)}
+  .grade.lock{background:#EDF0EC;color:var(--lock)}
+
+  /* ── sheet (compare) ────────────────────── */
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);font-size:13px}
+  th,td{padding:9px 8px;border-bottom:1px solid #EEF1EC;text-align:center;vertical-align:middle}
+  th{font-family:var(--display);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;background:var(--ink);color:#fff}
+  td:first-child,th:first-child{text-align:left}
+  .sheet .g{font-weight:600;white-space:nowrap}
+  .sheet .g small{display:block;color:var(--mute);font-weight:400;font-size:11px}
+  .sheet .p{font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:.03em}
+  .sheet .p.ok{color:var(--win)}
+  .sheet .p.bad{color:var(--loss);text-decoration:line-through;text-decoration-thickness:2px}
+  .sheet .p.hid{color:var(--lock);font-family:var(--body);font-size:11px;font-weight:500}
+  .sheet .p.none{color:var(--line)}
+  .sheet tfoot td{font-family:var(--display);font-size:18px;font-weight:800;background:#F4F6F3}
+
+  /* ── standings ──────────────────────────── */
+  .podium{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:14px}
+  .pl{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 14px 12px;position:relative;overflow:hidden}
+  .pl.lead{background:var(--ink);color:#fff}
+  .pl .name{font-family:var(--display);font-weight:700;font-size:22px;text-transform:uppercase;letter-spacing:.03em}
+  .pl .rec{font-family:var(--display);font-weight:800;font-size:44px;line-height:1;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+  .pl .sub{font-size:12px;color:var(--mute)}
+  .pl.lead .sub{color:rgba(255,255,255,.7)}
+  .pl .crown{position:absolute;top:10px;right:12px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--flag)}
+  .wk td.best{font-weight:700;color:var(--win)}
+  .wk td.w{text-align:left;font-weight:600}
+
+  /* ── misc ───────────────────────────────── */
+  .empty{padding:40px 16px;text-align:center;color:var(--mute)}
+  .empty b{display:block;font-family:var(--display);font-size:24px;color:var(--ink);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+  .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25);white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+  .toast.err{background:var(--loss)}
+  .note{font-size:12px;color:var(--mute);text-align:center;margin:18px 0 0}
+  .banner{background:#FFF4CC;border:1px solid #F2D77A;color:#6B5200;border-radius:12px;padding:10px 14px;font-size:13px;margin-bottom:12px}
+  .banner code{font-size:12px;background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px}
+  @media (max-width:420px){
+    .brand h1{font-size:36px}
+    .team{padding:10px 8px;gap:8px}
+    .team img{width:30px;height:30px}
+    .team .nm{font-size:17px}
+    .team .sc{font-size:26px;min-width:32px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="eyebrow" id="eyebrow">College Football Pick'em</div>
+      <h1 id="title">The <span>Sheet</span></h1>
+    </div>
+    <div class="who" id="who"></div>
+  </header>
+
+  <div class="weekbar">
+    <button id="prev" aria-label="Previous week">‹</button>
+    <div class="w"><b id="wlabel">Week —</b><small id="wdates">loading schedule…</small></div>
+    <button id="next" aria-label="Next week">›</button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="picks" class="on">My picks</button>
+    <button role="tab" data-tab="sheet">The sheet</button>
+    <button role="tab" data-tab="standings">Standings</button>
+  </div>
+
+  <div id="banner"></div>
+  <main id="view"><div class="empty">Loading…</div></main>
+  <p class="note">Scores from ESPN · picks lock at kickoff · refreshes every 2 min during games</p>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const C = window.PICKEM_CONFIG;
+  const ESPN = `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard`;
+  const configured = C.SUPABASE_URL && !C.SUPABASE_URL.includes("YOUR-");
+
+  // ── state ────────────────────────────────────────────────────────────────
+  const S = {
+    player: localStorage.getItem("pickem.player") || C.PLAYERS[0],
+    tab: "picks",
+    week: null,
+    calendar: [],           // [{n, label, start, end}]
+    games: {},              // week -> [game]
+    picks: {},              // week -> { "gameId|player": teamId }
+    fetchedAt: {},          // week -> ts
+    saving: 0,
+  };
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+  const $ = s => document.querySelector(s);
+  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const fmtTime = d => d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+  const fmtDay = d => d.toLocaleDateString([], {weekday:"long"});
+  const fmtDate = d => d.toLocaleDateString([], {month:"short", day:"numeric"});
+  const dayKey = d => d.toLocaleDateString([], {year:"numeric", month:"2-digit", day:"2-digit"});
+  let toastT;
+  const toast = (msg, err) => { const t = $("#toast"); t.textContent = msg; t.className = "toast show" + (err ? " err" : ""); clearTimeout(toastT); toastT = setTimeout(() => t.className = "toast", 1800); };
+  const key = (g, p) => `${g}|${p}`;
+  const locked = g => g.state !== "pre";           // kicked off, live, final, or postponed
+  const isVoid = g => /CANCEL|POSTPONE|FORFEIT/i.test(g.statusName) && !g.completed;
+  const idealText = hex => { const n = parseInt(hex, 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (r*299 + g*587 + b*114) / 1000 > 165 ? "#12211A" : "#fff"; };
+
+  // ── ESPN ─────────────────────────────────────────────────────────────────
+  function normalize(ev) {
+    const c = ev.competitions[0];
+    const t = side => {
+      const x = c.competitors.find(k => k.homeAway === side);
+      const rk = x.curatedRank?.current;
+      return {
+        id: x.team.id, abbr: x.team.abbreviation, name: x.team.shortDisplayName || x.team.location,
+        full: x.team.displayName, logo: x.team.logo, color: x.team.color || "12211A",
+        rank: rk && rk <= 25 ? rk : null, record: x.records?.find(r => r.type === "total")?.summary || "",
+        score: Number(x.score ?? 0), winner: !!x.winner,
+      };
+    };
+    const home = t("home"), away = t("away");
+    const st = ev.status?.type || c.status?.type || {};
+    let winner = null;
+    if (st.completed) winner = home.winner ? home.id : away.winner ? away.id : (home.score > away.score ? home.id : away.score > home.score ? away.id : null);
+    return {
+      id: ev.id, date: new Date(ev.date), home, away, winner,
+      state: st.state, completed: !!st.completed, statusName: st.name || "", statusText: st.shortDetail || st.description || "",
+      tv: c.broadcasts?.[0]?.names?.join("/") || "", neutral: !!c.neutralSite,
+    };
+  }
+
+  async function loadWeek(n, force) {
+    const stale = Date.now() - (S.fetchedAt[n] || 0) > 120000;
+    if (S.games[n] && !stale && !force) return S.games[n];
+    const url = `${ESPN}?groups=${C.ESPN_GROUP}&seasontype=2&week=${n}&dates=${C.SEASON}&limit=500`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("ESPN " + r.status);
+    const j = await r.json();
+    if (!S.calendar.length) {
+      const reg = (j.leagues?.[0]?.calendar || []).find(x => x.value === "2") || {};
+      S.calendar = (reg.entries || []).map(e => ({ n: +e.value, label: e.label, detail: e.detail, start: new Date(e.startDate), end: new Date(e.endDate) }));
+    }
+    S.games[n] = (j.events || []).map(normalize).sort((a, b) => a.date - b.date);
+    S.fetchedAt[n] = Date.now();
+    return S.games[n];
+  }
+
+  function currentWeek() {
+    const now = Date.now();
+    const hit = S.calendar.find(w => now >= w.start && now <= w.end);
+    if (hit) return hit.n;
+    if (S.calendar.length && now < S.calendar[0].start) return S.calendar[0].n;
+    return S.calendar.length ? S.calendar[S.calendar.length - 1].n : 1;
+  }
+
+  // ── Supabase (plain REST, no SDK) ────────────────────────────────────────
+  const sb = (path, opt = {}) => fetch(`${C.SUPABASE_URL}/rest/v1/${path}`, {
+    ...opt, headers: { apikey: C.SUPABASE_KEY, "Content-Type": "application/json", ...(opt.headers || {}) },
+  });
+
+  async function loadPicks(week) {
+    if (!configured) { S.picks[week] = S.picks[week] || {}; return; }
+    const r = await sb(`picks?season=eq.${C.SEASON}&week=eq.${week}&select=game_id,player,pick`);
+    if (!r.ok) throw new Error("Supabase " + r.status);
+    const rows = await r.json();
+    const m = {};
+    rows.forEach(x => m[key(x.game_id, x.player)] = x.pick);
+    S.picks[week] = m;
+  }
+
+  async function savePick(week, gameId, teamId) {
+    const k = key(gameId, S.player);
+    const prev = S.picks[week][k];
+    S.picks[week][k] = teamId;
+    render();
+    if (!configured) { toast("Demo mode — add Supabase keys to save"); return; }
+    S.saving++;
+    try {
+      const r = await sb("picks?on_conflict=season,week,game_id,player", {
+        method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ season: C.SEASON, week, game_id: gameId, player: S.player, pick: teamId }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      toast("Saved");
+    } catch (e) {
+      console.error(e);
+      if (prev) S.picks[week][k] = prev; else delete S.picks[week][k];
+      render();
+      toast("Couldn't save — check connection", true);
+    } finally { S.saving--; }
+  }
+
+  // ── grading ──────────────────────────────────────────────────────────────
+  const grade = (g, pick) => !pick ? null : !g.completed || isVoid(g) || !g.winner ? "pending" : g.winner === pick ? "ok" : "bad";
+
+  function tally(week) {
+    const out = {};
+    C.PLAYERS.forEach(p => out[p] = { ok: 0, bad: 0, pending: 0, picked: 0 });
+    (S.games[week] || []).forEach(g => C.PLAYERS.forEach(p => {
+      const r = grade(g, S.picks[week]?.[key(g.id, p)]);
+      if (!r) return; out[p].picked++; out[p][r]++;
+    }));
+    return out;
+  }
+
+  // ── render ───────────────────────────────────────────────────────────────
+  function renderHeader() {
+    $("#title").innerHTML = esc(C.TITLE).replace(/(\S+)$/, "<span>$1</span>");
+    $("#eyebrow").textContent = `${C.SEASON} · College Football Pick'em`;
+    const who = $("#who"); who.innerHTML = "";
+    C.PLAYERS.forEach(p => {
+      const b = el("button", p === S.player ? "on" : "", esc(p));
+      b.onclick = () => { S.player = p; localStorage.setItem("pickem.player", p); render(); };
+      who.appendChild(b);
+    });
+    const w = S.calendar.find(x => x.n === S.week);
+    $("#wlabel").textContent = w ? w.label : `Week ${S.week}`;
+    $("#wdates").textContent = w ? w.detail : "";
+    $("#prev").disabled = !S.calendar.length || S.week <= S.calendar[0].n;
+    $("#next").disabled = !S.calendar.length || S.week >= S.calendar[S.calendar.length - 1].n;
+    document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
+    $("#banner").innerHTML = configured ? "" : `<div class="banner"><b>Demo mode.</b> Picks aren't being saved yet — open <code>config.js</code> and paste in your Supabase URL and anon key.</div>`;
+  }
+
+  function teamButton(g, side, mine) {
+    const t = g[side];
+    const picked = mine === t.id;
+    const b = el("button", `team ${side}${picked ? " picked" : ""}${g.completed && g.winner && g.winner !== t.id ? " dim" : ""}`);
+    b.style.setProperty("--tc", "#" + t.color);
+    if (picked) { b.style.background = "#" + t.color; b.style.color = idealText(t.color); }
+    b.disabled = locked(g);
+    b.setAttribute("aria-pressed", picked);
+    b.innerHTML = `<img src="${esc(t.logo)}" alt="" loading="lazy">
+      <div class="n">${t.rank ? `<div class="rk">#${t.rank}</div>` : ""}<div class="nm" title="${esc(t.full)}">${esc(t.name)}</div><div class="rec">${esc(t.record)}</div></div>
+      ${g.state !== "pre" ? `<div class="sc">${t.score}</div>` : ""}`;
+    b.onclick = () => savePick(S.week, g.id, t.id);
+    return b;
+  }
+
+  function renderPicks(v) {
+    const games = S.games[S.week] || [];
+    if (!games.length) { v.appendChild(el("div", "empty", "<b>No games yet</b>ESPN hasn't posted this week's schedule.")); return; }
+    const t = tally(S.week)[S.player];
+    const openCount = games.filter(g => !isVoid(g)).length;
+    const prog = el("div", "progress");
+    prog.innerHTML = `<b>${t.picked}<span style="color:var(--mute)">/${openCount}</span></b><div class="bar"><i style="width:${openCount ? 100 * t.picked / openCount : 0}%"></i></div><span>${esc(S.player)}'s picks${t.ok + t.bad ? ` · <b style="font-size:15px">${t.ok}–${t.bad}</b> so far` : ""}</span>`;
+    v.appendChild(prog);
+
+    let lastDay = null;
+    games.forEach(g => {
+      const dk = dayKey(g.date);
+      if (dk !== lastDay) {
+        lastDay = dk;
+        const n = games.filter(x => dayKey(x.date) === dk).length;
+        v.appendChild(el("div", "day", `<h2>${fmtDay(g.date)}</h2><span>${fmtDate(g.date)} · ${n} game${n > 1 ? "s" : ""}</span>`));
+      }
+      const mine = S.picks[S.week]?.[key(g.id, S.player)];
+      const card = el("div", "game");
+      const m = el("div", "matchup");
+      m.appendChild(teamButton(g, "away", mine));
+      m.appendChild(el("div", "at", g.neutral ? "VS" : "AT"));
+      m.appendChild(teamButton(g, "home", mine));
+      card.appendChild(m);
+
+      const stCls = g.state === "in" ? "live" : g.completed ? "final" : "";
+      const stTxt = g.state === "pre" ? `${fmtTime(g.date)}${g.tv ? " · " + esc(g.tv) : ""}` : esc(g.statusText);
+      const gr = grade(g, mine);
+      let badge = "";
+      if (gr === "ok") badge = `<span class="grade ok">✓ Correct</span>`;
+      else if (gr === "bad") badge = `<span class="grade bad">✗ Missed</span>`;
+      else if (locked(g) && !mine) badge = `<span class="grade lock">No pick</span>`;
+      else if (locked(g)) badge = `<span class="grade lock">Locked</span>`;
+      card.appendChild(el("div", "meta", `<span class="st ${stCls}">${stTxt}</span>${badge}`));
+      v.appendChild(card);
+    });
+  }
+
+  function renderSheet(v) {
+    const games = S.games[S.week] || [];
+    if (!games.length) { v.appendChild(el("div", "empty", "<b>Nothing to compare</b>No games this week.")); return; }
+    const tb = el("table", "sheet");
+    tb.innerHTML = `<thead><tr><th>Game</th>${C.PLAYERS.map(p => `<th>${esc(p)}</th>`).join("")}</tr></thead>`;
+    const body = el("tbody");
+    games.forEach(g => {
+      const tr = el("tr");
+      const score = g.state !== "pre" ? `${g.away.abbr} ${g.away.score} – ${g.home.score} ${g.home.abbr}` : `${fmtDay(g.date).slice(0, 3)} ${fmtTime(g.date)}`;
+      tr.appendChild(el("td", "g", `${esc(g.away.abbr)} ${g.neutral ? "vs" : "@"} ${esc(g.home.abbr)}<small>${esc(score)}${g.completed ? " · Final" : g.state === "in" ? " · Live" : ""}</small>`));
+      C.PLAYERS.forEach(p => {
+        const pk = S.picks[S.week]?.[key(g.id, p)];
+        const hide = C.HIDE_PICKS_UNTIL_KICKOFF && p !== S.player && !locked(g);
+        let cls = "p", txt = "—";
+        if (!pk) cls += " none";
+        else if (hide) { cls += " hid"; txt = "hidden"; }
+        else { txt = pk === g.home.id ? g.home.abbr : g.away.abbr; const gr = grade(g, pk); if (gr === "ok") cls += " ok"; if (gr === "bad") cls += " bad"; }
+        tr.appendChild(el("td", cls, esc(txt)));
+      });
+      body.appendChild(tr);
+    });
+    tb.appendChild(body);
+    const t = tally(S.week);
+    const foot = el("tfoot");
+    foot.innerHTML = `<tr><td>Week total</td>${C.PLAYERS.map(p => `<td>${t[p].ok}–${t[p].bad}</td>`).join("")}</tr>`;
+    tb.appendChild(foot);
+    v.appendChild(tb);
+    if (C.HIDE_PICKS_UNTIL_KICKOFF) v.appendChild(el("p", "note", "Other people's picks stay hidden until kickoff."));
+  }
+
+  async function renderStandings(v) {
+    v.appendChild(el("div", "empty", "Adding up the season…"));
+    const cur = currentWeek();
+    const weeks = S.calendar.filter(w => w.n <= cur).map(w => w.n);
+    await Promise.all(weeks.map(async n => { await loadWeek(n); if (!S.picks[n]) await loadPicks(n); }));
+    v.innerHTML = "";
+    const season = {}; C.PLAYERS.forEach(p => season[p] = { ok: 0, bad: 0, weeksWon: 0 });
+    const perWeek = weeks.map(n => {
+      const t = tally(n);
+      const done = (S.games[n] || []).length && (S.games[n] || []).every(g => g.completed || isVoid(g));
+      const best = Math.max(...C.PLAYERS.map(p => t[p].ok));
+      C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) season[p].weeksWon++; });
+      return { n, t, done, best };
+    });
+    const order = [...C.PLAYERS].sort((a, b) => (season[b].ok - season[a].ok) || (season[a].bad - season[b].bad));
+    const top = season[order[0]].ok;
+    const pod = el("div", "podium");
+    order.forEach((p, i) => {
+      const s = season[p]; const tot = s.ok + s.bad; const pct = tot ? Math.round(1000 * s.ok / tot) / 10 : 0;
+      const lead = i === 0 && top > 0;
+      const back = top - s.ok;
+      pod.appendChild(el("div", "pl" + (lead ? " lead" : ""),
+        `${lead ? `<div class="crown">Leader</div>` : ""}<div class="name">${esc(p)}</div><div class="rec">${s.ok}–${s.bad}</div><div class="sub">${pct}% · ${s.weeksWon} week${s.weeksWon === 1 ? "" : "s"} won${!lead && back ? ` · ${back} back` : ""}</div>`));
+    });
+    v.appendChild(pod);
+    const tb = el("table", "wk");
+    tb.innerHTML = `<thead><tr><th>Week</th>${C.PLAYERS.map(p => `<th>${esc(p)}</th>`).join("")}</tr></thead>`;
+    const body = el("tbody");
+    perWeek.slice().reverse().forEach(({ n, t, done, best }) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", "w", `Week ${n}${done ? "" : ` <small style="color:var(--mute)">· in progress</small>`}`));
+      C.PLAYERS.forEach(p => tr.appendChild(el("td", done && t[p].ok === best && best > 0 ? "best" : "", t[p].picked ? `${t[p].ok}–${t[p].bad}` : "—")));
+      body.appendChild(tr);
+    });
+    tb.appendChild(body);
+    v.appendChild(tb);
+    v.appendChild(el("p", "note", "Correct picks count 1 point each. Ties for a week's best count as a week won for everyone tied."));
+  }
+
+  function render() {
+    renderHeader();
+    const v = $("#view"); v.innerHTML = "";
+    if (S.tab === "picks") renderPicks(v);
+    else if (S.tab === "sheet") renderSheet(v);
+    else renderStandings(v).catch(e => { console.error(e); v.innerHTML = `<div class="empty"><b>Couldn't load standings</b>${esc(e.message)}</div>`; });
+  }
+
+  // ── boot & events ────────────────────────────────────────────────────────
+  async function showWeek(n, force) {
+    try {
+      await loadWeek(n, force);
+      if (!S.picks[n] || force) await loadPicks(n);
+      S.week = n;
+      render();
+    } catch (e) {
+      console.error(e);
+      $("#view").innerHTML = `<div class="empty"><b>Couldn't load</b>${esc(e.message)}. Pull to refresh or try again in a minute.</div>`;
+    }
+  }
+  $("#prev").onclick = () => showWeek(S.week - 1);
+  $("#next").onclick = () => showWeek(S.week + 1);
+  document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); });
+
+  (async () => {
+    try {
+      await loadWeek(1);            // primes the calendar
+      const w = currentWeek();
+      await showWeek(w);
+    } catch (e) {
+      $("#view").innerHTML = `<div class="empty"><b>Couldn't reach ESPN</b>${esc(e.message)}</div>`;
+    }
+    // Auto-refresh scores while games are on (every 2 minutes)
+    setInterval(() => {
+      if (document.hidden || S.saving || S.week == null) return;
+      const live = (S.games[S.week] || []).some(g => g.state === "in" || (g.state === "pre" && g.date - Date.now() < 3600000));
+      if (live && S.tab !== "standings") showWeek(S.week, true);
+    }, 120000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && S.week != null) showWeek(S.week, true); });
+  })();
+})();
+</script>
+</body>
+</html>
