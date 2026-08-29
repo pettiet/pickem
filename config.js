@@ -16,7 +16,8 @@ window.PICKEM_CONFIG = {
 
   // Keep other people's picks hidden until a game kicks off (no copying!)
   HIDE_PICKS_UNTIL_KICKOFF: true,
-
+  // Games before this date/time (local) are shown as "Week 0". ESPN lumps them into Week 1.
+  WEEK0_END: "2026-09-01T00:00:00",
   // ESPN group 80 = all FBS. (Power 4 example: use conference filters in code.)
   ESPN_GROUP: 80,
 };
