@@ -122,6 +122,14 @@
   .wk td.best{font-weight:700;color:var(--win)}
   .wk td.w{text-align:left;font-weight:600}
 
+  /* ── welcome ────────────────────────────── */
+  .welcome{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px 18px;text-align:center;margin-top:8px}
+  .welcome b{display:block;font-family:var(--display);font-size:34px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;line-height:1}
+  .welcome p{color:var(--mute);font-size:13px;margin:8px 0 18px}
+  .choices{display:grid;gap:10px}
+  .choices button{padding:16px;border-radius:12px;background:var(--ink);color:#fff;font-family:var(--display);font-size:24px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .choices button:hover{background:#1E3A2C}
+
   /* ── misc ───────────────────────────────── */
   .empty{padding:40px 16px;text-align:center;color:var(--mute)}
   .empty b{display:block;font-family:var(--display);font-size:24px;color:var(--ink);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
@@ -177,7 +185,13 @@
 
   // ── state ────────────────────────────────────────────────────────────────
   const S = {
-    player: localStorage.getItem("pickem.player") || C.PLAYERS[0],
+    player: (() => {
+      const q = new URLSearchParams(location.search).get("player") || decodeURIComponent(location.hash.slice(1));
+      const fromUrl = C.PLAYERS.find(p => p.toLowerCase() === (q || "").toLowerCase());
+      if (fromUrl) { localStorage.setItem("pickem.player", fromUrl); history.replaceState(null, "", location.pathname); return fromUrl; }
+      const saved = localStorage.getItem("pickem.player");
+      return C.PLAYERS.includes(saved) ? saved : null;
+    })(),
     tab: "picks",
     week: null,
     calendar: [],           // [{n, label, start, end}]
@@ -460,9 +474,22 @@
     v.appendChild(el("p", "note", "Correct picks count 1 point each. A game left unpicked counts as a loss. Ties for a week's best count as a week won for everyone tied."));
   }
 
+  function renderWelcome(v) {
+    const w = el("div", "welcome", `<b>Who's picking?</b><p>Tap your name once. This phone will remember you.</p>`);
+    const row = el("div", "choices");
+    C.PLAYERS.forEach(p => {
+      const b = el("button", "", esc(p));
+      b.onclick = () => { S.player = p; localStorage.setItem("pickem.player", p); render(); };
+      row.appendChild(b);
+    });
+    w.appendChild(row);
+    v.appendChild(w);
+  }
+
   function render() {
     renderHeader();
     const v = $("#view"); v.innerHTML = "";
+    if (!S.player) { renderWelcome(v); return; }
     if (S.tab === "picks") renderPicks(v);
     else if (S.tab === "sheet") renderSheet(v);
     else renderStandings(v).catch(e => { console.error(e); v.innerHTML = `<div class="empty"><b>Couldn't load standings</b>${esc(e.message)}</div>`; });
