@@ -40,6 +40,7 @@
   .who{display:flex;gap:6px}
   .who button{padding:8px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:600;font-size:14px;color:var(--ink-2)}
   .who button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .who .me{padding:8px 14px;border-radius:999px;background:var(--ink);color:#fff;font-weight:600;font-size:14px}
 
   /* ── week bar ───────────────────────────── */
   .weekbar{display:flex;align-items:center;justify-content:space-between;background:var(--ink);color:#fff;border-radius:var(--radius);padding:6px 6px;margin:6px 0 10px;box-shadow:var(--shadow)}
@@ -186,13 +187,7 @@
 
   // ── state ────────────────────────────────────────────────────────────────
   const S = {
-    player: (() => {
-      const q = new URLSearchParams(location.search).get("player") || decodeURIComponent(location.hash.slice(1));
-      const fromUrl = C.PLAYERS.find(p => p.toLowerCase() === (q || "").toLowerCase());
-      if (fromUrl) { localStorage.setItem("pickem.player", fromUrl); history.replaceState(null, "", location.pathname); return fromUrl; }
-      const saved = localStorage.getItem("pickem.player");
-      return C.PLAYERS.includes(saved) ? saved : null;
-    })(),
+    player: null,   // resolved in boot (secure mode needs an async hash check)
     tab: "picks",
     week: null,
     calendar: [],           // [{n, label, start, end}]
@@ -214,7 +209,12 @@
   const toast = (msg, err) => { const t = $("#toast"); t.textContent = msg; t.className = "toast show" + (err ? " err" : ""); clearTimeout(toastT); toastT = setTimeout(() => t.className = "toast", 1800); };
   const key = (g, p) => `${g}|${p}`;
   const WEEK0_END = new Date(C.WEEK0_END || `${C.SEASON}-09-01T00:00:00`);   // first moment of "real" Week 1
-  const dbWeek = n => n === 0 ? 1 : n;   // ESPN (and the database) count Week 0 as part of Week 1
+  const dbWeek = n => n === 0 ? 1 : n;
+  const sha256 = async txt => {
+    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+  };
+  const SECURE = C.SECURE_MODE && C.TOKEN_HASHES && Object.keys(C.TOKEN_HASHES).length > 0;   // ESPN (and the database) count Week 0 as part of Week 1
   const locked = g => g.state !== "pre";           // kicked off, live, final, or postponed
   const isVoid = g => /CANCEL|POSTPONE|FORFEIT/i.test(g.statusName) && !g.completed;
   const idealText = hex => { const n = parseInt(hex, 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (r*299 + g*587 + b*114) / 1000 > 165 ? "#12211A" : "#fff"; };
@@ -293,6 +293,7 @@
   }
 
   async function savePick(week, gameId, teamId) {
+    if (!S.player) return;
     const k = key(gameId, S.player);
     const prev = S.picks[week][k];
     S.picks[week][k] = teamId;
@@ -337,11 +338,15 @@
     $("#title").innerHTML = esc(C.TITLE).replace(/(\S+)$/, "<span>$1</span>");
     $("#eyebrow").textContent = `${C.SEASON} · College Football Pick'em`;
     const who = $("#who"); who.innerHTML = "";
-    C.PLAYERS.forEach(p => {
-      const b = el("button", p === S.player ? "on" : "", esc(p));
-      b.onclick = () => { S.player = p; localStorage.setItem("pickem.player", p); render(); };
-      who.appendChild(b);
-    });
+    if (SECURE) {
+      who.appendChild(el("span", "me", S.player ? esc(S.player) : "Viewer"));
+    } else {
+      C.PLAYERS.forEach(p => {
+        const b = el("button", p === S.player ? "on" : "", esc(p));
+        b.onclick = () => { S.player = p; localStorage.setItem("pickem.player", p); render(); };
+        who.appendChild(b);
+      });
+    }
     const w = S.calendar.find(x => x.n === S.week);
     $("#wlabel").textContent = w ? w.label : `Week ${S.week}`;
     $("#wdates").textContent = w ? w.detail : "";
@@ -418,7 +423,7 @@
       tr.appendChild(el("td", "g", `${esc(g.away.abbr)} ${g.neutral ? "vs" : "@"} ${esc(g.home.abbr)}<small>${esc(score)}${g.completed ? " · Final" : g.state === "in" ? " · Live" : ""}</small>`));
       C.PLAYERS.forEach(p => {
         const pk = S.picks[S.week]?.[key(g.id, p)];
-        const hide = C.HIDE_PICKS_UNTIL_KICKOFF && p !== S.player && !locked(g);
+        const hide = C.HIDE_PICKS_UNTIL_KICKOFF && p !== S.player && !locked(g);   // viewer: S.player null hides all
         let cls = "p", txt = "—";
         if (!pk) { const gr = grade(g, pk); cls += gr === "bad" ? " bad" : " none"; if (gr === "bad") txt = "none"; }
         else if (hide) { cls += " hid"; txt = "hidden"; }
@@ -484,6 +489,10 @@
   }
 
   function renderWelcome(v) {
+    if (SECURE) {
+      v.appendChild(el("div", "welcome", `<b>Private game</b><p>Picks are made through personal links. Open the link you were sent — this phone will remember you. Meanwhile you can browse <b style="font-size:inherit;display:inline;text-transform:none">The sheet</b> and <b style="font-size:inherit;display:inline;text-transform:none">Standings</b>.</p>`));
+      return;
+    }
     const w = el("div", "welcome", `<b>Who's picking?</b><p>Tap your name once. This phone will remember you.</p>`);
     const row = el("div", "choices");
     C.PLAYERS.forEach(p => {
@@ -498,7 +507,7 @@
   function render() {
     renderHeader();
     const v = $("#view"); v.innerHTML = "";
-    if (!S.player) { renderWelcome(v); return; }
+    if (!S.player && (S.tab === "picks" || !SECURE)) { renderWelcome(v); return; }
     if (S.tab === "picks") renderPicks(v);
     else if (S.tab === "sheet") renderSheet(v);
     else renderStandings(v).catch(e => { console.error(e); v.innerHTML = `<div class="empty"><b>Couldn't load standings</b>${esc(e.message)}</div>`; });
@@ -520,8 +529,31 @@
   $("#next").onclick = () => showWeek(S.week + 1);
   document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); });
 
+  async function resolvePlayer() {
+    if (SECURE) {
+      const urlKey = new URLSearchParams(location.search).get("key");
+      const token = urlKey || localStorage.getItem("pickem.token") || "";
+      if (token) {
+        const name = C.TOKEN_HASHES[await sha256(token.trim())];
+        if (name && C.PLAYERS.includes(name)) {
+          localStorage.setItem("pickem.token", token.trim());
+          if (urlKey) history.replaceState(null, "", location.pathname);
+          return name;
+        }
+        if (urlKey) toast("That link isn't valid", true);
+      }
+      return null;   // viewer mode
+    }
+    const q = new URLSearchParams(location.search).get("player") || decodeURIComponent(location.hash.slice(1));
+    const fromUrl = C.PLAYERS.find(p => p.toLowerCase() === (q || "").toLowerCase());
+    if (fromUrl) { localStorage.setItem("pickem.player", fromUrl); history.replaceState(null, "", location.pathname); return fromUrl; }
+    const saved = localStorage.getItem("pickem.player");
+    return C.PLAYERS.includes(saved) ? saved : null;
+  }
+
   (async () => {
     try {
+      S.player = await resolvePlayer();
       await loadWeek(1);            // primes the calendar
       const w = currentWeek();
       await showWeek(w);
