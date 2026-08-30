@@ -10,9 +10,9 @@ window.PICKEM_CONFIG = {
   PLAYERS: ["Nick", "Ashley", "Andrew"],
 
   // Supabase → Project Settings → General → "Project URL"
-  SUPABASE_URL: "https://YOUR-PROJECT-ID.supabase.co",
+  SUPABASE_URL: "https://nrhfxnjfsydiqqavjzpr.supabase.co",
   // Supabase → Project Settings → API Keys → "Publishable key" (starts with sb_publishable_)
-  SUPABASE_KEY: "sb_publishable_PASTE-YOURS-HERE",
+  SUPABASE_KEY: "sb_publishable_LJYRfHkubA3ZW1TZRGDQGg_o4DdACxg",
 
   // Private links: when SECURE_MODE is true, picking requires a personal link
   // (…/?key=XXXX). Only fingerprints of the keys live here, not the keys themselves.
