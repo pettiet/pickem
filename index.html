@@ -118,7 +118,8 @@
   .pl .rec{font-family:var(--display);font-weight:800;font-size:44px;line-height:1;margin:4px 0 2px;font-variant-numeric:tabular-nums}
   .pl .sub{font-size:12px;color:var(--mute)}
   .pl.lead .sub{color:rgba(255,255,255,.7)}
-  .pl .crown{position:absolute;top:10px;right:12px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--flag)}
+  .pl .crown{position:absolute;top:10px;right:12px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+  .pl.lead .crown{color:var(--flag)}
   .wk td.best{font-weight:700;color:var(--win)}
   .wk td.w{text-align:left;font-weight:600}
 
@@ -449,15 +450,23 @@
       C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) season[p].weeksWon++; });
       return { n, t, done, best };
     });
-    const order = [...C.PLAYERS].sort((a, b) => (season[b].ok - season[a].ok) || (season[a].bad - season[b].bad));
+    // Rank by wins, then fewer losses, then weeks won. Equal on all three = tied.
+    const rankKey = p => [season[p].ok, -season[p].bad, season[p].weeksWon];
+    const cmp = (a, b) => { const x = rankKey(a), y = rankKey(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return y[i] - x[i]; return 0; };
+    const order = [...C.PLAYERS].sort(cmp);
     const top = season[order[0]].ok;
+    const ordinal = n => n + (["th","st","nd","rd"][((n % 100) - 20) % 10] || ["th","st","nd","rd"][n % 100] || "th");
     const pod = el("div", "podium");
+    let place = 0;
     order.forEach((p, i) => {
+      if (i === 0 || cmp(order[i - 1], p) !== 0) place = i + 1;
+      const tied = order.filter(q => cmp(q, p) === 0).length > 1;
       const s = season[p]; const tot = s.ok + s.bad; const pct = tot ? Math.round(1000 * s.ok / tot) / 10 : 0;
-      const lead = i === 0 && top > 0;
+      const lead = place === 1 && tot > 0;
       const back = top - s.ok;
+      const label = tot ? `${tied ? "T-" : ""}${ordinal(place)}` : "";
       pod.appendChild(el("div", "pl" + (lead ? " lead" : ""),
-        `${lead ? `<div class="crown">Leader</div>` : ""}<div class="name">${esc(p)}</div><div class="rec">${s.ok}–${s.bad}</div><div class="sub">${pct}% · ${s.weeksWon} week${s.weeksWon === 1 ? "" : "s"} won${!lead && back ? ` · ${back} back` : ""}</div>`));
+        `${label ? `<div class="crown">${label}</div>` : ""}<div class="name">${esc(p)}</div><div class="rec">${s.ok}–${s.bad}</div><div class="sub">${pct}% · ${s.weeksWon} week${s.weeksWon === 1 ? "" : "s"} won${!lead && back ? ` · ${back} back` : ""}</div>`));
     });
     v.appendChild(pod);
     const tb = el("table", "wk");
@@ -471,7 +480,7 @@
     });
     tb.appendChild(body);
     v.appendChild(tb);
-    v.appendChild(el("p", "note", "Correct picks count 1 point each. A game left unpicked counts as a loss. Ties for a week's best count as a week won for everyone tied."));
+    v.appendChild(el("p", "note", "Correct picks count 1 point each. A game left unpicked counts as a loss. Season rank: most wins, then fewest losses, then most weeks won — equal on all three is a tie. Ties for a week's best count as a week won for everyone tied."));
   }
 
   function renderWelcome(v) {
