@@ -59,7 +59,11 @@
   /* ── filters ────────────────────────────── */
   .filters{display:flex;gap:8px;margin:0 0 10px}
   .filters input,.filters select{font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;min-height:44px;box-shadow:var(--shadow)}
-  .filters input{flex:1;min-width:0}
+  .searchwrap{position:relative;flex:1;min-width:0;display:flex}
+  .searchwrap input{flex:1;min-width:0;width:100%;padding-right:38px}
+  .searchwrap .clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;background:#E2E7E1;color:var(--ink-2);font-size:18px;line-height:1;display:grid;place-items:center}
+  .searchwrap .clear:hover{background:var(--line)}
+  input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
   .filters input::placeholder{color:var(--mute)}
   .filters select{max-width:46%;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2374847B'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
   .filters input:focus,.filters select:focus{outline:3px solid var(--flag);outline-offset:1px;border-color:var(--ink)}
@@ -395,7 +399,8 @@
 
     // ── search + conference filter (display only — never affects scoring) ──
     const matches = g => {
-      if (S.conf && g.home.conf !== S.conf && g.away.conf !== S.conf) return false;
+      if (S.conf === "__other") { if (CONF_NAMES[g.home.conf] && CONF_NAMES[g.away.conf]) return false; }
+      else if (S.conf && g.home.conf !== S.conf && g.away.conf !== S.conf) return false;
       const q = S.q.trim().toLowerCase();
       if (!q) return true;
       const hay = `${g.home.name} ${g.home.full} ${g.home.abbr} ${g.away.name} ${g.away.full} ${g.away.abbr}`.toLowerCase();
@@ -404,17 +409,29 @@
     const shown = games.filter(matches);
 
     const fr = el("div", "filters");
+    const wrap = el("div", "searchwrap");
     const inp = document.createElement("input");
     inp.type = "search"; inp.placeholder = "Search teams…"; inp.value = S.q;
+    inp.enterKeyHint = "search";
     inp.setAttribute("aria-label", "Search teams");
     inp.oninput = e => { S.q = e.target.value; S.refocus = true; render(); };
-    fr.appendChild(inp);
+    inp.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } };
+    wrap.appendChild(inp);
+    if (S.q) {
+      const x = el("button", "clear", "×");
+      x.type = "button"; x.setAttribute("aria-label", "Clear search");
+      x.onclick = () => { S.q = ""; render(); };
+      wrap.appendChild(x);
+    }
+    fr.appendChild(wrap);
     const sel = document.createElement("select");
     sel.setAttribute("aria-label", "Filter by conference");
-    const ids = [...new Set(games.flatMap(g => [g.home.conf, g.away.conf]).filter(Boolean))];
-    ids.sort((a, b) => (CONF_NAMES[a] || "Other").localeCompare(CONF_NAMES[b] || "Other"));
+    const allIds = [...new Set(games.flatMap(g => [g.home.conf, g.away.conf]).filter(Boolean))];
+    const ids = allIds.filter(id => CONF_NAMES[id]).sort((a, b) => CONF_NAMES[a].localeCompare(CONF_NAMES[b]));
+    const hasOther = allIds.some(id => !CONF_NAMES[id]);
     sel.innerHTML = `<option value="">All conferences</option>` +
-      ids.map(id => `<option value="${esc(id)}"${id === S.conf ? " selected" : ""}>${esc(CONF_NAMES[id] || "Other")}</option>`).join("");
+      ids.map(id => `<option value="${esc(id)}"${id === S.conf ? " selected" : ""}>${esc(CONF_NAMES[id])}</option>`).join("") +
+      (hasOther ? `<option value="__other"${S.conf === "__other" ? " selected" : ""}>Other</option>` : "");
     sel.onchange = e => { S.conf = e.target.value; render(); };
     fr.appendChild(sel);
     v.appendChild(fr);
