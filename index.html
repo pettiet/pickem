@@ -56,6 +56,15 @@
   .tabs button{padding:10px 0;border-radius:9px;font-weight:600;color:var(--ink-2);font-size:14px}
   .tabs button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
 
+  /* ── filters ────────────────────────────── */
+  .filters{display:flex;gap:8px;margin:0 0 10px}
+  .filters input,.filters select{font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;min-height:44px;box-shadow:var(--shadow)}
+  .filters input{flex:1;min-width:0}
+  .filters input::placeholder{color:var(--mute)}
+  .filters select{max-width:46%;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2374847B'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+  .filters input:focus,.filters select:focus{outline:3px solid var(--flag);outline-offset:1px;border-color:var(--ink)}
+  .fcount{font-size:12px;color:var(--mute);white-space:nowrap}
+
   /* ── progress ───────────────────────────── */
   .progress{display:flex;align-items:center;gap:12px;margin:2px 2px 12px;font-size:13px;color:var(--ink-2)}
   .progress .bar{flex:1;height:6px;border-radius:3px;background:#DDE3DC;overflow:hidden}
@@ -195,7 +204,15 @@
     picks: {},              // week -> { "gameId|player": teamId }
     fetchedAt: {},          // week -> ts
     saving: 0,
+    q: "",                  // search text (My picks)
+    conf: "",               // conference filter (My picks)
+    refocus: false,
   };
+
+  // ESPN conference (group) ids → names. Unknown ids show as "Other".
+  const CONF_NAMES = { "1":"ACC", "4":"Big 12", "5":"Big Ten", "8":"SEC", "9":"Pac-12",
+    "12":"Conference USA", "15":"MAC", "17":"Mountain West", "18":"Independents",
+    "37":"Sun Belt", "151":"American" };
 
   // ── helpers ──────────────────────────────────────────────────────────────
   const $ = s => document.querySelector(s);
@@ -229,6 +246,7 @@
         id: x.team.id, abbr: x.team.abbreviation, name: x.team.shortDisplayName || x.team.location,
         full: x.team.displayName, logo: x.team.logo, color: x.team.color || "12211A",
         rank: rk && rk <= 25 ? rk : null, record: x.records?.find(r => r.type === "total")?.summary || "",
+        conf: String(x.team.conferenceId ?? ""),
         score: Number(x.score ?? 0), winner: !!x.winner,
       };
     };
@@ -374,20 +392,51 @@
   function renderPicks(v) {
     const games = S.games[S.week] || [];
     if (!games.length) { v.appendChild(el("div", "empty", "<b>No games yet</b>ESPN hasn't posted this week's schedule.")); return; }
+
+    // ── search + conference filter (display only — never affects scoring) ──
+    const matches = g => {
+      if (S.conf && g.home.conf !== S.conf && g.away.conf !== S.conf) return false;
+      const q = S.q.trim().toLowerCase();
+      if (!q) return true;
+      const hay = `${g.home.name} ${g.home.full} ${g.home.abbr} ${g.away.name} ${g.away.full} ${g.away.abbr}`.toLowerCase();
+      return q.split(/\s+/).every(t => hay.includes(t));
+    };
+    const shown = games.filter(matches);
+
+    const fr = el("div", "filters");
+    const inp = document.createElement("input");
+    inp.type = "search"; inp.placeholder = "Search teams…"; inp.value = S.q;
+    inp.setAttribute("aria-label", "Search teams");
+    inp.oninput = e => { S.q = e.target.value; S.refocus = true; render(); };
+    fr.appendChild(inp);
+    const sel = document.createElement("select");
+    sel.setAttribute("aria-label", "Filter by conference");
+    const ids = [...new Set(games.flatMap(g => [g.home.conf, g.away.conf]).filter(Boolean))];
+    ids.sort((a, b) => (CONF_NAMES[a] || "Other").localeCompare(CONF_NAMES[b] || "Other"));
+    sel.innerHTML = `<option value="">All conferences</option>` +
+      ids.map(id => `<option value="${esc(id)}"${id === S.conf ? " selected" : ""}>${esc(CONF_NAMES[id] || "Other")}</option>`).join("");
+    sel.onchange = e => { S.conf = e.target.value; render(); };
+    fr.appendChild(sel);
+    v.appendChild(fr);
+    if (S.refocus) { S.refocus = false; requestAnimationFrame(() => { inp.focus(); try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch {} }); }
+    const filtered = shown.length !== games.length;
     const t = tally(S.week)[S.player];
     const openCount = games.filter(g => !isVoid(g)).length;
     const made = games.filter(g => !isVoid(g) && S.picks[S.week]?.[key(g.id, S.player)]).length;
     const left = games.filter(g => !isVoid(g) && !locked(g) && !S.picks[S.week]?.[key(g.id, S.player)]).length;
     const prog = el("div", "progress");
     prog.innerHTML = `<b>${made}<span style="color:var(--mute)">/${openCount}</span></b><div class="bar"><i style="width:${openCount ? 100 * made / openCount : 0}%"></i></div><span>${esc(S.player)}${left ? ` · <b style="font-size:15px;color:var(--loss)">${left}</b> still open` : " · all set"}${t.ok + t.bad ? ` · <b style="font-size:15px">${t.ok}–${t.bad}</b>` : ""}</span>`;
+    if (filtered) prog.innerHTML += `<span class="fcount">${shown.length} of ${games.length} games</span>`;
     v.appendChild(prog);
 
+    if (!shown.length) { v.appendChild(el("div", "empty", `<b>No games match</b>Try a different team name or set the conference back to "All".`)); return; }
+
     let lastDay = null;
-    games.forEach(g => {
+    shown.forEach(g => {
       const dk = dayKey(g.date);
       if (dk !== lastDay) {
         lastDay = dk;
-        const n = games.filter(x => dayKey(x.date) === dk).length;
+        const n = shown.filter(x => dayKey(x.date) === dk).length;
         v.appendChild(el("div", "day", `<h2>${fmtDay(g.date)}</h2><span>${fmtDate(g.date)} · ${n} game${n > 1 ? "s" : ""}</span>`));
       }
       const mine = S.picks[S.week]?.[key(g.id, S.player)];
@@ -399,7 +448,7 @@
       card.appendChild(m);
 
       const stCls = g.state === "in" ? "live" : g.completed ? "final" : "";
-      const stTxt = g.state === "pre" ? `${fmtTime(g.date)}${g.tv ? " · " + esc(g.tv) : ""}` : esc(g.statusText);
+      const stTxt = `${g.state === "pre" ? fmtTime(g.date) : esc(g.statusText)}${g.tv ? " · " + esc(g.tv) : ""}`;
       const gr = grade(g, mine);
       let badge = "";
       if (gr === "ok") badge = `<span class="grade ok">✓ Correct</span>`;
