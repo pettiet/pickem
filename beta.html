@@ -59,8 +59,10 @@
   .occ b{display:block;font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase;line-height:1.1}
   .occ span{font-size:12px;color:var(--ink-2)}
   .evt{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 12px;background:#F4F6F3;border-bottom:1px solid #EEF1EC;border-left:4px solid var(--flag);font-size:11px;color:var(--ink-2)}
-  .evt .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
-  .evt .t b{color:var(--ink);font-weight:700}
+  .evt .t{display:flex;align-items:baseline;min-width:0;font-weight:600;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+  .evt .t b{color:var(--ink);font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .evt .t em{font-style:normal;flex:none;max-width:55%;overflow:hidden;text-overflow:ellipsis}   /* the round stays readable; a long event name shortens first */
+  .evt .t i{font-style:normal;font-size:14px;margin-right:6px;letter-spacing:0}
   .evt .where{flex:none;color:var(--mute);font-weight:500}
   .pl .case{margin-top:8px;font-size:20px;letter-spacing:3px;line-height:1}
 
@@ -282,6 +284,28 @@
     sweet16: { name: "Sweet 16",      icon: "🍬", prize: "the candy",         blurb: "Sweet 16 and Elite Eight.",             accent: "#F06AA0", bar: "linear-gradient(135deg,#2E1650,#5B2A86)" },
     final4:  { name: "Final Four",    icon: "✂️", prize: "the nets",          blurb: "Final Four and the title game.",        accent: "#F2B705", bar: "linear-gradient(135deg,#111111,#3A3320)" },
   };
+  // Tournament and showcase icons. The first keyword found in ESPN's event name wins, so sponsor
+  // names coming and going don't matter. Add your own in config.js: BASKETBALL: { EVENT_ICONS: { "maui": "🌺" } }
+  const EVENT_ICONS = [
+    [/ncaa tournament/, "🏆"], [/maui/, "🌺"], [/atlantis/, "🔱"], [/baha mar|bahamas|paradise jam|cancun|cayman/, "🏝️"],
+    [/players era/, "🎰"], [/fort myers|emerald coast|myrtle beach/, "🏖️"], [/espn events/, "🏰"], [/rady children/, "🧸"],
+    [/charleston classic/, "🌴"], [/thanksgiving|hoopsgiving/, "🦃"], [/champions classic|basketball crown/, "👑"],
+    [/jimmy v/, "🎗️"], [/hall of fame/, "🏛️"], [/cbs sports/, "📺"], [/orange bowl/, "🍊"], [/dick vitale/, "🎙️"],
+    [/bill walton/, "☮️"], [/second line/, "🎺"], [/music city/, "🎸"], [/rocket city/, "🚀"], [/snake river/, "🐍"],
+    [/lake tahoe/, "🏔️"], [/greenbrier/, "⛰️"], [/eternal city/, "🍝"], [/empire/, "🗽"], [/crosstown shootout/, "🌶️"],
+    [/big 5/, "🔔"], [/tobacco road/, "🛣️"], [/brotherhood/, "🤝"], [/backyard/, "🏡"], [/bad boy mowers/, "🚜"],
+    [/wildcat/, "🐾"], [/indy classic/, "🏁"], [/never forget/, "🕊️"], [/acrisure|colangelo/, "🌵"],
+    [/texas|houston|san antonio|shootout/, "🤠"], [/legends/, "🌟"], [/challenge|battleground|battle/, "⚔️"],
+    [/holiday|christmas/, "🎄"], [/winter/, "❄️"], [/capital/, "🏛️"], [/\bnit\b/, "🏀"], [/tournament|championship/, "🎟️"],
+  ];
+  const PLACE_ICONS = { HI: "🌺", NV: "🎰", FL: "🌴", Bahamas: "🏝️", Mexico: "🏝️" };   // unknown event, known kind of place
+  const eventIcon = g => {
+    const name = (g.event || "").toLowerCase();
+    if (!name) return "";
+    for (const [k, v] of Object.entries(BB.EVENT_ICONS || {})) if (name.includes(String(k).toLowerCase())) return v;
+    for (const [re, v] of EVENT_ICONS) if (re.test(name)) return v;
+    return PLACE_ICONS[g.region] || "🏟️";
+  };
   const occOf = n => S.calendar.find(w => w.n === n)?.special || null;
   const listNames = a => a.length < 2 ? a.join("") : a.length === 2 ? a.join(" and ") : `${a.slice(0, -1).join(", ")} and ${a[a.length - 1]}`;
 
@@ -372,13 +396,14 @@
     let date = new Date(ev.date), tbd = false;
     if (day && c.timeValid === false) { tbd = true; date = new Date(+day.slice(0, 4), +day.slice(4, 6) - 1, +day.slice(6, 8), 23, 59); }
     // Basketball only: the tournament or showcase a game belongs to ("Maui Invitational - Semifinal") and where it's played.
-    let event = "", place = "";
+    let event = "", place = "", region = "";
     if (day) {
       event = ((c.notes || []).find(x => x.headline)?.headline || "").replace(/^NCAA Men's Basketball Championship/i, "NCAA Tournament").trim();
       if (event && c.neutralSite) place = c.venue?.address?.city || "";
+      if (event) region = c.venue?.address?.state || c.venue?.address?.country || "";
     }
     return {
-      id: ev.id, date, tbd, event, place, home, away, winner,
+      id: ev.id, date, tbd, event, place, region, home, away, winner,
       state: st.state, completed: !!st.completed, statusName: st.name || "", statusText: st.shortDetail || st.description || "",
       tv: c.broadcasts?.[0]?.names?.join("/") || "", neutral: !!c.neutralSite,
     };
@@ -680,7 +705,7 @@
     sel.innerHTML = !POWER
       ? `<option value="">All conferences</option>` + ids.map(opt).join("") + other
       : `<option value="">All games</option><option value="__ranked"${S.conf === "__ranked" ? " selected" : ""}>Top 25 games</option>` +
-        (evts.length ? `<optgroup label="Events">${evts.map(e => `<option value="evt:${esc(e)}"${S.conf === "evt:" + e ? " selected" : ""}>${esc(e)}</option>`).join("")}</optgroup>` : "") +
+        (evts.length ? `<optgroup label="Events">${evts.map(e => `<option value="evt:${esc(e)}"${S.conf === "evt:" + e ? " selected" : ""}>${eventIcon(games.find(g => evBase(g) === e))} ${esc(e)}</option>`).join("")}</optgroup>` : "") +
         `<optgroup label="Power conferences">${ids.filter(id => POWER.includes(id)).map(opt).join("")}</optgroup>` +
         `<optgroup label="Everyone else">${ids.filter(id => !POWER.includes(id)).map(opt).join("")}${other}</optgroup>`;
     sel.onchange = e => { S.conf = e.target.value; render(); };
@@ -704,7 +729,7 @@
       const card = el("div", "game");
       if (g.event) {
         const [name, ...rest] = g.event.split(" - ");
-        card.appendChild(el("div", "evt", `<span class="t"><b>${esc(name)}</b>${rest.length ? " · " + esc(rest.join(" · ")) : ""}</span>${g.place ? `<span class="where">${esc(g.place)}</span>` : ""}`));
+        card.appendChild(el("div", "evt", `<span class="t"><i>${eventIcon(g)}</i><b>${esc(name)}</b>${rest.length ? `<em>&nbsp;· ${esc(rest.join(" · "))}</em>` : ""}</span>${g.place ? `<span class="where">${esc(g.place)}</span>` : ""}`));
       }
       const m = el("div", "matchup");
       m.appendChild(teamButton(g, "away", mine));
@@ -772,7 +797,7 @@
     games.forEach(g => {
       const tr = el("tr");
       const score = g.state !== "pre" ? `${g.away.abbr} ${g.away.score} – ${g.home.score} ${g.home.abbr}` : `${fmtDay(g.date).slice(0, 3)} ${g.tbd ? "TBD" : fmtTime(g.date)}`;
-      tr.appendChild(el("td", "g", `${esc(g.away.abbr)} ${g.neutral ? "vs" : "@"} ${esc(g.home.abbr)}<small>${esc(score)}${g.completed ? " · Final" : g.state === "in" ? " · Live" : ""}</small>`));
+      tr.appendChild(el("td", "g", `${g.event ? eventIcon(g) + " " : ""}${esc(g.away.abbr)} ${g.neutral ? "vs" : "@"} ${esc(g.home.abbr)}<small>${esc(score)}${g.completed ? " · Final" : g.state === "in" ? " · Live" : ""}</small>`));
       C.PLAYERS.forEach(p => {
         const pk = S.picks[S.week]?.[key(g.id, p)];
         const hide = C.HIDE_PICKS_UNTIL_KICKOFF && p !== S.player && !locked(g);   // viewer: S.player null hides all
