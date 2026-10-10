@@ -42,8 +42,32 @@
   .who button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .who .me{padding:8px 14px;border-radius:999px;background:var(--ink);color:#fff;font-weight:600;font-size:14px}
 
+  /* ── sport switch ───────────────────────── */
+  .sports{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#E2E7E1;padding:4px;border-radius:12px;margin:4px 0 8px}
+  .sports button{padding:9px 0;border-radius:9px;font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+  .sports button.on{background:var(--ink);color:#fff;box-shadow:var(--shadow)}
+  .sports button.on i{color:var(--flag)}
+  .sports button i{font-style:normal;margin-right:6px}
+  .sports[hidden]{display:none}
+  body[data-sport="cbb"]{--flag:#F07A1A}   /* hardwood orange */
+  body[data-sport="cbb"] .matchup{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}   /* long school names shorten with … instead of squeezing the other team */
+  .team .nologo{width:36px;height:36px;flex:none;border-radius:50%;background:#E2E7E1;color:var(--ink-2);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.02em}
+
+  /* ── basketball occasions (Feast Week and friends) ── */
+  .occ{display:flex;align-items:center;gap:12px;background:var(--card);border-left:5px solid var(--flag);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 14px;margin:0 0 10px}
+  .occ i{font-style:normal;font-size:28px;line-height:1}
+  .occ b{display:block;font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase;line-height:1.1}
+  .occ span{font-size:12px;color:var(--ink-2)}
+  .evt{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 12px;background:#F4F6F3;border-bottom:1px solid #EEF1EC;border-left:4px solid var(--flag);font-size:11px;color:var(--ink-2)}
+  .evt .t{display:flex;align-items:baseline;min-width:0;font-weight:600;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+  .evt .t b{color:var(--ink);font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .evt .t em{font-style:normal;flex:none;max-width:55%;overflow:hidden;text-overflow:ellipsis}   /* the round stays readable; a long event name shortens first */
+  .evt .t i{font-style:normal;font-size:14px;margin-right:6px;letter-spacing:0}
+  .evt .where{flex:none;color:var(--mute);font-weight:500}
+  .pl .case{margin-top:8px;font-size:20px;letter-spacing:3px;line-height:1}
+
   /* ── week bar ───────────────────────────── */
-  .weekbar{display:flex;align-items:center;justify-content:space-between;background:var(--ink);color:#fff;border-radius:var(--radius);padding:6px 6px;margin:6px 0 10px;box-shadow:var(--shadow)}
+  .weekbar{display:flex;align-items:center;justify-content:space-between;background:var(--bar,var(--ink));color:#fff;border-radius:var(--radius);padding:6px 6px;margin:6px 0 10px;box-shadow:var(--shadow)}
   .weekbar button{width:44px;height:44px;border-radius:10px;font-size:22px;display:grid;place-items:center;color:#fff}
   .weekbar button:disabled{opacity:.25;cursor:default}
   .weekbar button:not(:disabled):hover{background:rgba(255,255,255,.1)}
@@ -163,7 +187,8 @@
   @media (max-width:420px){
     .brand h1{font-size:36px}
     .team{padding:10px 8px;gap:8px}
-    .team img{width:30px;height:30px}
+    .team img,.team .nologo{width:30px;height:30px}
+    .team .nologo{font-size:11px}
     .team .nm{font-size:17px}
     .team .sc{font-size:26px;min-width:32px}
   }
@@ -180,6 +205,11 @@
     <div class="who" id="who"></div>
   </header>
 
+  <div class="sports" id="sports" role="tablist" aria-label="Sport" hidden>
+    <button role="tab" data-sport="cfb"><i>🏈</i>Football</button>
+    <button role="tab" data-sport="cbb"><i>🏀</i>Basketball</button>
+  </div>
+
   <div class="weekbar">
     <button id="prev" aria-label="Previous week">‹</button>
     <div class="w"><b id="wlabel">Week —</b><small id="wdates">loading schedule…</small></div>
@@ -194,42 +224,132 @@
 
   <div id="banner"></div>
   <main id="view"><div class="empty">Loading…</div></main>
-  <p class="note">Scores from ESPN · picks lock at kickoff · refreshes every 2 min during games</p>
+  <p class="note" id="footnote">Scores from ESPN · picks lock at kickoff · refreshes every 2 min during games</p>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
 (() => {
   const C = window.PICKEM_CONFIG;
-  const ESPN = `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard`;
+  const ESPN_BASE = `https://site.api.espn.com/apis/site/v2/sports`;
+  const ESPN = `${ESPN_BASE}/football/college-football/scoreboard`;
   const configured = C.SUPABASE_URL && !C.SUPABASE_URL.includes("YOUR-");
 
+  // ── sports ───────────────────────────────────────────────────────────────
+  // Football is the original game. Basketball rides alongside it with its own
+  // weeks, its own picks table and its own standings. Everything basketball needs
+  // has a default here, so config.js doesn't have to change. Optional overrides:
+  //   BASKETBALL: { ENABLED: false, GAMES: "both", POWER_CONFS: [...], SEASON: 2027, TABLE: "picks_cbb" }
+  const BB = C.BASKETBALL || {};
+  const HOOPS_ON = BB.ENABLED !== false;
+  const _now = new Date();
+  // Seasons are named for the year they end in (2026–27 → 2027). Rolls over in July.
+  const HOOPS_SEASON = BB.SEASON || (_now.getMonth() >= 6 ? _now.getFullYear() + 1 : _now.getFullYear());
+  const SPORTS = {
+    cfb: {
+      name: "Football", eyebrow: `${C.SEASON} · College Football Pick'em`,
+      table: "picks", season: C.SEASON, lock: "kickoff",
+      // ESPN conference (group) ids → names. Unknown ids show as "Other".
+      confs: { "1":"ACC", "4":"Big 12", "5":"Big Ten", "8":"SEC", "9":"Pac-12",
+        "12":"Conference USA", "15":"MAC", "17":"Mountain West", "18":"Independents",
+        "37":"Sun Belt", "151":"American" },
+    },
+    cbb: {
+      name: "Basketball", eyebrow: `${HOOPS_SEASON - 1}–${String(HOOPS_SEASON).slice(-2)} · College Basketball Pick'em`,
+      table: BB.TABLE || "picks_cbb", season: HOOPS_SEASON, lock: "tip-off",
+      espn: `${ESPN_BASE}/basketball/mens-college-basketball/scoreboard`,
+      // Which games make the list: a team from one of these conferences, or any Top 25 team.
+      // ACC, Big East, Big Ten, Big 12, Pac-12, SEC (ESPN's basketball ids differ from football's).
+      power: (BB.POWER_CONFS || ["2", "4", "7", "8", "21", "23"]).map(String),
+      // "any" = at least one team qualifies · "both" = both teams must qualify
+      rule: BB.GAMES === "both" ? "both" : "any",
+      confs: { "2":"ACC", "4":"Big East", "7":"Big Ten", "8":"Big 12", "21":"Pac-12", "23":"SEC",
+        "1":"America East", "3":"Atlantic 10", "5":"Big Sky", "6":"Big South", "9":"Big West", "10":"CAA",
+        "11":"Conference USA", "12":"Ivy", "13":"MAAC", "14":"MAC", "16":"MEAC", "18":"Missouri Valley",
+        "19":"NEC", "20":"Ohio Valley", "22":"Patriot", "24":"SoCon", "25":"Southland", "26":"SWAC",
+        "27":"Sun Belt", "29":"WCC", "30":"UAC", "44":"Mountain West", "45":"Horizon", "46":"ASUN",
+        "49":"Summit", "62":"American" },
+    },
+  };
+  // ── basketball occasions ─────────────────────────────────────────────────
+  // A handful of weeks get their own name, colors and a trophy for whoever wins the week.
+  // Looks only: none of this changes which games count or how picks are graded.
+  // Turn the whole thing off with BASKETBALL: { OCCASIONS: false } in config.js.
+  const OCCASIONS = {
+    tipoff:  { name: "Tip-Off Week",  icon: "🏀", prize: "the game ball",     blurb: "Opening week.",                         accent: "#F07A1A", bar: "linear-gradient(135deg,#12211A,#3D2B12)" },
+    feast:   { name: "Feast Week",    icon: "🦃", prize: "the turkey",        blurb: "Thanksgiving tournaments everywhere.",  accent: "#E08A2B", bar: "linear-gradient(135deg,#5E1B26,#8A3A1C)" },
+    holiday: { name: "Holiday Hoops", icon: "🎁", prize: "the gift",          blurb: "Christmas week.",                       accent: "#D4343F", bar: "linear-gradient(135deg,#123B2A,#1F5A3C)" },
+    champ:   { name: "Champ Week",    icon: "🎟️", prize: "the golden ticket", blurb: "Conference tournaments.",               accent: "#E0B03A", bar: "linear-gradient(135deg,#101B36,#243B6B)" },
+    madness: { name: "March Madness", icon: "👠", prize: "the glass slipper", blurb: "First and second rounds.",              accent: "#4C8DF6", bar: "linear-gradient(135deg,#0A2350,#1746A0)" },
+    sweet16: { name: "Sweet 16",      icon: "🍬", prize: "the candy",         blurb: "Sweet 16 and Elite Eight.",             accent: "#F06AA0", bar: "linear-gradient(135deg,#2E1650,#5B2A86)" },
+    final4:  { name: "Final Four",    icon: "✂️", prize: "the nets",          blurb: "Final Four and the title game.",        accent: "#F2B705", bar: "linear-gradient(135deg,#111111,#3A3320)" },
+  };
+  // Tournament and showcase icons. The first keyword found in ESPN's event name wins, so sponsor
+  // names coming and going don't matter. Add your own in config.js: BASKETBALL: { EVENT_ICONS: { "maui": "🌺" } }
+  const EVENT_ICONS = [
+    [/ncaa tournament/, "🏆"], [/maui/, "🌺"], [/atlantis/, "🔱"], [/baha mar|bahamas|paradise jam|cancun|cayman/, "🏝️"],
+    [/players era/, "🎰"], [/fort myers|emerald coast|myrtle beach/, "🏖️"], [/espn events/, "🏰"], [/rady children/, "🧸"],
+    [/charleston classic/, "🌴"], [/thanksgiving|hoopsgiving/, "🦃"], [/champions classic|basketball crown/, "👑"],
+    [/jimmy v/, "🎗️"], [/hall of fame/, "🏛️"], [/cbs sports/, "📺"], [/orange bowl/, "🍊"], [/dick vitale/, "🎙️"],
+    [/bill walton/, "☮️"], [/second line/, "🎺"], [/music city/, "🎸"], [/rocket city/, "🚀"], [/snake river/, "🐍"],
+    [/lake tahoe/, "🏔️"], [/greenbrier/, "⛰️"], [/eternal city/, "🍝"], [/empire/, "🗽"], [/crosstown shootout/, "🌶️"],
+    [/big 5/, "🔔"], [/tobacco road/, "🛣️"], [/brotherhood/, "🤝"], [/backyard/, "🏡"], [/bad boy mowers/, "🚜"],
+    [/wildcat/, "🐾"], [/indy classic/, "🏁"], [/never forget/, "🕊️"], [/acrisure|colangelo/, "🌵"],
+    [/texas|houston|san antonio|shootout/, "🤠"], [/legends/, "🌟"], [/challenge|battleground|battle/, "⚔️"],
+    [/holiday|christmas/, "🎄"], [/winter/, "❄️"], [/capital/, "🏛️"], [/\bnit\b/, "🏀"], [/tournament|championship/, "🎟️"],
+  ];
+  const PLACE_ICONS = { HI: "🌺", NV: "🎰", FL: "🌴", Bahamas: "🏝️", Mexico: "🏝️" };   // unknown event, known kind of place
+  const eventIcon = g => {
+    const name = (g.event || "").toLowerCase();
+    if (!name) return "";
+    for (const [k, v] of Object.entries(BB.EVENT_ICONS || {})) if (name.includes(String(k).toLowerCase())) return v;
+    for (const [re, v] of EVENT_ICONS) if (re.test(name)) return v;
+    return PLACE_ICONS[g.region] || "🏟️";
+  };
+  const occOf = n => S.calendar.find(w => w.n === n)?.special || null;
+  const listNames = a => a.length < 2 ? a.join("") : a.length === 2 ? a.join(" and ") : `${a.slice(0, -1).join(", ")} and ${a[a.length - 1]}`;
+
+  const firstSport = () => {
+    if (!HOOPS_ON) return "cfb";
+    let saved = null; try { saved = localStorage.getItem("pickem.sport"); } catch {}
+    if (SPORTS[saved]) return saved;
+    const m = _now.getMonth();            // no choice saved yet: basketball once football is over (Feb–Jun)
+    return m >= 1 && m <= 5 ? "cbb" : "cfb";
+  };
+
   // ── state ────────────────────────────────────────────────────────────────
-  const S = {
-    player: null,   // resolved in boot (secure mode needs an async hash check)
-    tab: "picks",
+  // Each sport keeps its own copy of the per-season data, so switching never mixes them.
+  const mkData = () => ({
     week: null,
     calendar: [],           // [{n, label, start, end}]
     games: {},              // week -> [game]
     picks: {},              // week -> { "gameId|player": teamId }
     fetchedAt: {},          // week -> ts
-    saving: 0,
     q: "",                  // search text (My picks)
     conf: "",               // conference filter (My picks)
+    all: {}, days: {}, frozen: {}, noTable: false,   // basketball only
+  });
+  const DATA = { cfb: mkData(), cbb: mkData() };
+  const S = {
+    player: null,   // resolved in boot (secure mode needs an async hash check)
+    tab: "picks",
+    sport: firstSport(),
+    saving: 0,
     refocus: false,
+    rtok: 0,                // bumps on every render; lets slow loads notice they're out of date
     favs: (() => { try { return JSON.parse(localStorage.getItem("pickem.favs." + (window.PICKEM_CONFIG?.SEASON || "")) || "{}"); } catch { return {}; } })(),
   };
+
+  // S.week, S.games, S.picks… always mean "the sport that's showing right now".
+  ["week", "calendar", "games", "picks", "fetchedAt", "q", "conf"].forEach(k =>
+    Object.defineProperty(S, k, { get: () => DATA[S.sport][k], set: v => { DATA[S.sport][k] = v; } }));
+  const SP = () => SPORTS[S.sport];
 
   function toggleFav(id) {
     if (S.favs[id]) delete S.favs[id]; else S.favs[id] = true;
     try { localStorage.setItem("pickem.favs." + C.SEASON, JSON.stringify(S.favs)); } catch {}
     render();
   }
-
-  // ESPN conference (group) ids → names. Unknown ids show as "Other".
-  const CONF_NAMES = { "1":"ACC", "4":"Big 12", "5":"Big Ten", "8":"SEC", "9":"Pac-12",
-    "12":"Conference USA", "15":"MAC", "17":"Mountain West", "18":"Independents",
-    "37":"Sun Belt", "151":"American" };
 
   // ── helpers ──────────────────────────────────────────────────────────────
   const $ = s => document.querySelector(s);
@@ -243,7 +363,7 @@
   const toast = (msg, err) => { const t = $("#toast"); t.textContent = msg; t.className = "toast show" + (err ? " err" : ""); clearTimeout(toastT); toastT = setTimeout(() => t.className = "toast", 1800); };
   const key = (g, p) => `${g}|${p}`;
   const WEEK0_END = new Date(C.WEEK0_END || `${C.SEASON}-09-01T00:00:00`);   // first moment of "real" Week 1
-  const dbWeek = n => n === 0 ? 1 : n;
+  const dbWeek = (n, sp = S.sport) => sp === "cfb" && n === 0 ? 1 : n;   // football's Week 0 is stored as Week 1
   const sha256 = async txt => {
     const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
     return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -254,7 +374,7 @@
   const idealText = hex => { const n = parseInt(hex, 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (r*299 + g*587 + b*114) / 1000 > 165 ? "#12211A" : "#fff"; };
 
   // ── ESPN ─────────────────────────────────────────────────────────────────
-  function normalize(ev) {
+  function normalize(ev, day) {
     const c = ev.competitions[0];
     const t = side => {
       const x = c.competitors.find(k => k.homeAway === side);
@@ -271,37 +391,148 @@
     const st = ev.status?.type || c.status?.type || {};
     let winner = null;
     if (st.completed) winner = home.winner ? home.id : away.winner ? away.id : (home.score > away.score ? home.id : away.score > home.score ? away.id : null);
+    // Basketball only: a game with no tip time yet comes through as midnight Eastern, which
+    // would land on the wrong day here. Pin it to the end of the day ESPN lists it under.
+    let date = new Date(ev.date), tbd = false;
+    if (day && c.timeValid === false) { tbd = true; date = new Date(+day.slice(0, 4), +day.slice(4, 6) - 1, +day.slice(6, 8), 23, 59); }
+    // Basketball only: the tournament or showcase a game belongs to ("Maui Invitational - Semifinal") and where it's played.
+    let event = "", place = "", region = "";
+    if (day) {
+      event = ((c.notes || []).find(x => x.headline)?.headline || "").replace(/^NCAA Men's Basketball Championship/i, "NCAA Tournament").trim();
+      if (event && c.neutralSite) place = c.venue?.address?.city || "";
+      if (event) region = c.venue?.address?.state || c.venue?.address?.country || "";
+    }
     return {
-      id: ev.id, date: new Date(ev.date), home, away, winner,
+      id: ev.id, date, tbd, event, place, region, home, away, winner,
       state: st.state, completed: !!st.completed, statusName: st.name || "", statusText: st.shortDetail || st.description || "",
       tv: c.broadcasts?.[0]?.names?.join("/") || "", neutral: !!c.neutralSite,
     };
   }
 
-  async function loadWeek(n, force) {
-    const stale = Date.now() - (S.fetchedAt[n] || 0) > 120000;
-    if (S.games[n] && !stale && !force) return S.games[n];
-    const url = `${ESPN}?groups=${C.ESPN_GROUP}&seasontype=2&week=${dbWeek(n)}&dates=${C.SEASON}&limit=500`;
+  async function loadWeek(n, force, sp = S.sport) {
+    if (sp === "cbb") return loadHoopsWeek(n, force);
+    const D = DATA.cfb;
+    const stale = Date.now() - (D.fetchedAt[n] || 0) > 120000;
+    if (D.games[n] && !stale && !force) return D.games[n];
+    const url = `${ESPN}?groups=${C.ESPN_GROUP}&seasontype=2&week=${dbWeek(n, "cfb")}&dates=${C.SEASON}&limit=500`;
     const r = await fetch(url);
     if (!r.ok) throw new Error("ESPN " + r.status);
     const j = await r.json();
-    if (!S.calendar.length) {
+    if (!D.calendar.length) {
       const reg = (j.leagues?.[0]?.calendar || []).find(x => x.value === "2") || {};
-      S.calendar = (reg.entries || []).map(e => ({ n: +e.value, label: e.label, detail: e.detail, start: new Date(e.startDate), end: new Date(e.endDate) }));
+      D.calendar = (reg.entries || []).map(e => ({ n: +e.value, label: e.label, detail: e.detail, start: new Date(e.startDate), end: new Date(e.endDate) }));
       // ESPN files the "Week 0" games under Week 1. Split them out for display.
-      const w1 = S.calendar.find(w => w.n === 1);
+      const w1 = D.calendar.find(w => w.n === 1);
       if (w1 && WEEK0_END > w1.start && WEEK0_END < w1.end) {
         const fd = d => d.toLocaleDateString([], { month: "short", day: "numeric" });
-        S.calendar.unshift({ n: 0, label: "Week 0", detail: `${fd(w1.start)}–${fd(new Date(WEEK0_END - 1))}`, start: w1.start, end: new Date(WEEK0_END - 1) });
+        D.calendar.unshift({ n: 0, label: "Week 0", detail: `${fd(w1.start)}–${fd(new Date(WEEK0_END - 1))}`, start: w1.start, end: new Date(WEEK0_END - 1) });
         w1.start = WEEK0_END; w1.detail = `${fd(WEEK0_END)}–${fd(w1.end)}`;
       }
     }
-    let evs = (j.events || []).map(normalize);
+    let evs = (j.events || []).map(ev => normalize(ev));
     if (n === 0) evs = evs.filter(g => g.date < WEEK0_END);
-    else if (n === 1 && S.calendar[0]?.n === 0) evs = evs.filter(g => g.date >= WEEK0_END);
-    S.games[n] = evs.sort((a, b) => a.date - b.date);
-    S.fetchedAt[n] = Date.now();
-    return S.games[n];
+    else if (n === 1 && D.calendar[0]?.n === 0) evs = evs.filter(g => g.date >= WEEK0_END);
+    D.games[n] = evs.sort((a, b) => a.date - b.date);
+    D.fetchedAt[n] = Date.now();
+    return D.games[n];
+  }
+
+  // ── basketball schedule ──────────────────────────────────────────────────
+  // ESPN has no "weeks" for basketball, so the app makes its own: Monday through Sunday,
+  // matching the AP poll (new rankings every Monday). Week 1 runs from Nov 1 through the
+  // first Sunday after opening Monday; the last week runs through the title game.
+  const DAY = 864e5;
+  function buildHoopsCalendar() {
+    const D = DATA.cbb;
+    if (D.calendar.length) return;
+    const Y = SPORTS.cbb.season;
+    const utc = (y, m, d) => new Date(Date.UTC(y, m, d, 12));
+    const firstMonday = (y, m) => { const d = utc(y, m, 1); return new Date(+d + ((8 - d.getUTCDay()) % 7) * DAY); };
+    const title = firstMonday(Y, 3);                           // national championship: first Monday of April
+    const spans = [];
+    let s = utc(Y - 1, 10, 1), e = new Date(+firstMonday(Y - 1, 10) + 6 * DAY);
+    while (s <= title) { spans.push([s, e > title ? title : e]); s = new Date(+e + DAY); e = new Date(+s + 6 * DAY); }
+    if (spans.length > 1 && spans[spans.length - 1][1] - spans[spans.length - 1][0] < 2 * DAY) { const last = spans.pop(); spans[spans.length - 1][1] = last[1]; }
+    const ymd = d => d.toISOString().slice(0, 10).replace(/-/g, "");
+    const local = (d, h, mi, sec) => new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), h, mi, sec);
+    const mon = d => d.toLocaleDateString([], { month: "short", timeZone: "UTC" });
+    D.calendar = spans.map(([a, b], i) => {
+      const days = []; for (let t = +a; t <= +b; t += DAY) days.push(ymd(new Date(t)));
+      const detail = mon(a) === mon(b) ? `${mon(a)} ${a.getUTCDate()}–${b.getUTCDate()}` : `${mon(a)} ${a.getUTCDate()}–${mon(b)} ${b.getUTCDate()}`;
+      // The week "ends" at 4am the next morning so a late Sunday tip doesn't flip everyone to next week mid-game.
+      return { n: i + 1, label: `Week ${i + 1}`, detail, days, start: local(a, 0, 0, 0), end: new Date(+local(b, 23, 59, 59) + 4 * 3600e3) };
+    });
+    if (BB.OCCASIONS !== false) {
+      const cal = D.calendar, L = cal.length;
+      const tag = (w, k) => { if (w && !w.special) w.special = OCCASIONS[k]; };
+      const weekOf = d => cal.find(w => w.days.includes(ymd(d)));
+      const nov1 = utc(Y - 1, 10, 1);
+      const thanksgiving = new Date(+nov1 + (((4 - nov1.getUTCDay() + 7) % 7) + 21) * DAY);   // fourth Thursday of November
+      // The NCAA tournament always fills the last three weeks; the week before it is conference-tournament week.
+      tag(cal[L - 1], "final4"); tag(cal[L - 2], "sweet16"); tag(cal[L - 3], "madness"); tag(cal[L - 4], "champ");
+      tag(cal[0], "tipoff"); tag(weekOf(thanksgiving), "feast"); tag(weekOf(utc(Y - 1, 11, 25)), "holiday");
+    }
+  }
+
+  const hoopsKey = n => `pickem.cbb.${SPORTS.cbb.season}.w${n}.v1`;
+  const hoopsQualifies = g => {
+    const P = SPORTS.cbb.power, ok = t => P.includes(t.conf) || !!t.rank;
+    return SPORTS.cbb.rule === "both" ? ok(g.home) && ok(g.away) : ok(g.home) || ok(g.away);
+  };
+
+  // Turn "every Division I game this week" into the week's list: power-conference and Top 25
+  // games, plus anything somebody already picked (so a game can't vanish once it's in play).
+  function hoopsFilter(n) {
+    const D = DATA.cbb, all = D.all[n];
+    if (!all) return;
+    const picked = new Set(Object.keys(D.picks[n] || {}).map(k => k.split("|")[0]));
+    D.games[n] = all.filter(g => hoopsQualifies(g) || picked.has(g.id)).sort((a, b) => a.date - b.date);
+    // A finished week never changes again — keep it on this device so standings stay quick.
+    const w = D.calendar.find(x => x.n === n);
+    if (!D.frozen[n] && D.picks[n] && !D.noTable && w && Date.now() > +w.end + DAY && D.games[n].length && D.games[n].every(g => g.completed || isVoid(g))) {
+      D.frozen[n] = true;
+      try { localStorage.setItem(hoopsKey(n), JSON.stringify(D.games[n])); } catch {}
+    }
+  }
+
+  async function loadHoopsWeek(n, force) {
+    const D = DATA.cbb;
+    buildHoopsCalendar();
+    const w = D.calendar.find(x => x.n === n);
+    if (!w) return (D.games[n] = []);
+    if (!D.all[n]) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(hoopsKey(n)) || "null");
+        if (Array.isArray(saved) && saved.length) { saved.forEach(g => g.date = new Date(g.date)); D.all[n] = saved; D.frozen[n] = true; }
+      } catch {}
+    }
+    if (D.frozen[n]) { hoopsFilter(n); return D.games[n]; }
+    const now = Date.now();
+    const getDay = async d => {
+      const url = `${SPORTS.cbb.espn}?groups=50&dates=${d}&limit=500`;
+      let r = await fetch(url);
+      if (!r.ok) r = await fetch(url);                       // ESPN hiccups now and then; one retry
+      if (!r.ok) throw new Error("ESPN " + r.status);
+      return ((await r.json()).events || []).map(ev => normalize(ev, d));
+    };
+    await Promise.all(w.days.map(async d => {
+      const ts = +new Date(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8));
+      const c = D.days[d];
+      if (c) {
+        if (c.done) return;                                  // every game that day is final
+        const near = now > ts - DAY && now < ts + 2 * DAY;   // yesterday, today, tomorrow: keep fresh
+        if (now - c.at < (near ? (force ? 0 : 120000) : 1800000)) return;
+      }
+      try {
+        const evs = await getDay(d);
+        D.days[d] = { evs, at: now, done: now > ts + 1.5 * DAY && evs.every(g => g.completed || isVoid(g)) };
+      } catch (e) { if (!c) throw e; }                       // keep showing what we had if a refresh fails
+    }));
+    const seen = new Set();
+    D.all[n] = w.days.flatMap(d => D.days[d]?.evs || []).filter(g => !seen.has(g.id) && seen.add(g.id));
+    D.fetchedAt[n] = now;
+    hoopsFilter(n);
+    return D.games[n];
   }
 
   function currentWeek() {
@@ -317,35 +548,40 @@
     ...opt, headers: { apikey: C.SUPABASE_KEY, "Content-Type": "application/json", ...(opt.headers || {}) },
   });
 
-  async function loadPicks(week) {
-    if (!configured) { S.picks[week] = S.picks[week] || {}; return; }
-    const r = await sb(`picks?season=eq.${C.SEASON}&week=eq.${dbWeek(week)}&select=game_id,player,pick`);
+  async function loadPicks(week, sp = S.sport) {
+    const D = DATA[sp], T = SPORTS[sp];
+    if (!configured) { D.picks[week] = D.picks[week] || {}; if (sp === "cbb") hoopsFilter(week); return; }
+    const r = await sb(`${T.table}?season=eq.${T.season}&week=eq.${dbWeek(week, sp)}&select=game_id,player,pick`);
+    if (sp === "cbb" && r.status === 404) { D.noTable = true; D.picks[week] = {}; hoopsFilter(week); return; }   // basketball table not created yet
     if (!r.ok) throw new Error("Supabase " + r.status);
     const rows = await r.json();
     const m = {};
     rows.forEach(x => m[key(x.game_id, x.player)] = x.pick);
-    S.picks[week] = m;
+    D.picks[week] = m;
+    if (sp === "cbb") { D.noTable = false; hoopsFilter(week); }
   }
 
   async function savePick(week, gameId, teamId) {
     if (!S.player) return;
+    const sp = S.sport, D = DATA[sp], T = SPORTS[sp];
+    if (D.noTable) { toast("Basketball picks aren't set up yet", true); return; }
     const k = key(gameId, S.player);
-    const prev = S.picks[week][k];
-    S.picks[week][k] = teamId;
+    const prev = D.picks[week][k];
+    D.picks[week][k] = teamId;
     render();
     if (!configured) { toast("Demo mode — add Supabase keys to save"); return; }
     S.saving++;
     try {
-      const r = await sb("picks?on_conflict=season,week,game_id,player", {
+      const r = await sb(`${T.table}?on_conflict=season,week,game_id,player`, {
         method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-        body: JSON.stringify({ season: C.SEASON, week: dbWeek(week), game_id: gameId, player: S.player, pick: teamId }),
+        body: JSON.stringify({ season: T.season, week: dbWeek(week, sp), game_id: gameId, player: S.player, pick: teamId }),
       });
       if (!r.ok) throw new Error(await r.text());
       toast("Saved");
     } catch (e) {
       console.error(e);
-      if (prev) S.picks[week][k] = prev; else delete S.picks[week][k];
-      render();
+      if (prev) D.picks[week][k] = prev; else delete D.picks[week][k];
+      if (S.sport === sp) render();
       toast("Couldn't save — check connection", true);
     } finally { S.saving--; }
   }
@@ -371,7 +607,11 @@
   // ── render ───────────────────────────────────────────────────────────────
   function renderHeader() {
     $("#title").innerHTML = esc(C.TITLE).replace(/(\S+)$/, "<span>$1</span>");
-    $("#eyebrow").textContent = `${C.SEASON} · College Football Pick'em`;
+    $("#eyebrow").textContent = SP().eyebrow;
+    document.body.dataset.sport = S.sport;
+    $("#sports").hidden = !HOOPS_ON;
+    document.querySelectorAll("#sports button").forEach(b => { const on = b.dataset.sport === S.sport; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+    $("#footnote").textContent = `Scores from ESPN · picks lock at ${SP().lock} · refreshes every 2 min during games`;
     const who = $("#who"); who.innerHTML = "";
     if (SECURE) {
       who.appendChild(el("span", "me", S.player ? esc(S.player) : "Viewer"));
@@ -383,12 +623,16 @@
       });
     }
     const w = S.calendar.find(x => x.n === S.week);
-    $("#wlabel").textContent = w ? w.label : `Week ${S.week}`;
-    $("#wdates").textContent = w ? w.detail : "";
+    const occ = w?.special || null;
+    $("#wlabel").textContent = occ ? `${occ.icon} ${occ.name}` : w ? w.label : S.week == null ? "Week —" : `Week ${S.week}`;
+    $("#wdates").textContent = !w ? "" : occ ? `${w.label} · ${w.detail}` : w.detail;
+    const bs = document.body.style;
+    if (occ) { bs.setProperty("--flag", occ.accent); bs.setProperty("--bar", occ.bar); } else { bs.removeProperty("--flag"); bs.removeProperty("--bar"); }
     $("#prev").disabled = !S.calendar.length || S.week <= S.calendar[0].n;
     $("#next").disabled = !S.calendar.length || S.week >= S.calendar[S.calendar.length - 1].n;
     document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
-    $("#banner").innerHTML = configured ? "" : `<div class="banner"><b>Demo mode.</b> Picks aren't being saved yet — open <code>config.js</code> and paste in your Supabase URL and anon key.</div>`;
+    $("#banner").innerHTML = !configured ? `<div class="banner"><b>Demo mode.</b> Picks aren't being saved yet — open <code>config.js</code> and paste in your Supabase URL and anon key.</div>`
+      : DATA[S.sport].noTable ? `<div class="banner"><b>Basketball isn't switched on yet.</b> You can browse the schedule, but picks can't be saved until the one-time Supabase setup is run (<code>supabase-basketball.sql</code>). Football is unaffected.</div>` : "";
   }
 
   function teamButton(g, side, mine) {
@@ -399,8 +643,8 @@
     if (picked) { b.style.background = "#" + t.color; b.style.color = idealText(t.color); }
     b.disabled = locked(g);
     b.setAttribute("aria-pressed", picked);
-    b.innerHTML = `<img src="${esc(t.logo)}" alt="" loading="lazy">
-      <div class="n">${t.rank ? `<div class="rk">#${t.rank}</div>` : ""}<div class="nm" title="${esc(t.full)}">${esc(t.name)}</div><div class="rec">${esc(t.record)}</div></div>
+    b.innerHTML = `${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : `<span class="nologo">${esc((t.abbr || "?").slice(0, 4))}</span>`}
+      <div class="n">${t.rank ? `<div class="rk">${/^NCAA Tournament/.test(g.event || "") ? `${t.rank} SEED` : `#${t.rank}`}</div>` : ""}<div class="nm" title="${esc(t.full)}">${esc(t.name)}</div><div class="rec">${esc(t.record)}</div></div>
       ${g.state !== "pre" ? `<div class="sc">${t.score}</div>` : ""}`;
     b.onclick = () => savePick(S.week, g.id, t.id);
     return b;
@@ -408,11 +652,25 @@
 
   function renderPicks(v) {
     const games = S.games[S.week] || [];
+    const occ = occOf(S.week);
+    if (occ) {
+      const tt = tally(S.week), top = Math.max(...C.PLAYERS.map(p => tt[p].ok));
+      const over = games.length && games.every(g => g.completed || isVoid(g));
+      const champs = over && top > 0 ? C.PLAYERS.filter(p => tt[p].ok === top) : [];
+      const line = champs.length ? `${esc(listNames(champs))} ${champs.length > 1 ? "share" : "took"} ${occ.prize}.` : `${occ.blurb} Most wins this week takes ${occ.prize}.`;
+      v.appendChild(el("div", "occ", `<i>${occ.icon}</i><div><b>${esc(occ.name)}</b><span>${line}</span></div>`));
+    }
     if (!games.length) { v.appendChild(el("div", "empty", "<b>No games yet</b>ESPN hasn't posted this week's schedule.")); return; }
 
     // ── search + conference filter (display only — never affects scoring) ──
+    const CONF_NAMES = SP().confs, POWER = SP().power;
+    const evBase = g => (g.event || "").split(" - ")[0];
+    const evts = POWER ? [...new Set(games.map(evBase).filter(Boolean))].sort() : [];
+    if (S.conf.startsWith("evt:") && !evts.includes(S.conf.slice(4))) S.conf = "";   // that event isn't in this week
     const matches = g => {
-      if (S.conf === "__other") { if (CONF_NAMES[g.home.conf] && CONF_NAMES[g.away.conf]) return false; }
+      if (S.conf.startsWith("evt:")) { if (evBase(g) !== S.conf.slice(4)) return false; }
+      else if (S.conf === "__ranked") { if (!g.home.rank && !g.away.rank) return false; }
+      else if (S.conf === "__other") { if (CONF_NAMES[g.home.conf] && CONF_NAMES[g.away.conf]) return false; }
       else if (S.conf && g.home.conf !== S.conf && g.away.conf !== S.conf) return false;
       const q = S.q.trim().toLowerCase();
       if (!q) return true;
@@ -442,9 +700,14 @@
     const allIds = [...new Set(games.flatMap(g => [g.home.conf, g.away.conf]).filter(Boolean))];
     const ids = allIds.filter(id => CONF_NAMES[id]).sort((a, b) => CONF_NAMES[a].localeCompare(CONF_NAMES[b]));
     const hasOther = allIds.some(id => !CONF_NAMES[id]);
-    sel.innerHTML = `<option value="">All conferences</option>` +
-      ids.map(id => `<option value="${esc(id)}"${id === S.conf ? " selected" : ""}>${esc(CONF_NAMES[id])}</option>`).join("") +
-      (hasOther ? `<option value="__other"${S.conf === "__other" ? " selected" : ""}>Other</option>` : "");
+    const opt = id => `<option value="${esc(id)}"${id === S.conf ? " selected" : ""}>${esc(CONF_NAMES[id])}</option>`;
+    const other = hasOther ? `<option value="__other"${S.conf === "__other" ? " selected" : ""}>Other</option>` : "";
+    sel.innerHTML = !POWER
+      ? `<option value="">All conferences</option>` + ids.map(opt).join("") + other
+      : `<option value="">All games</option><option value="__ranked"${S.conf === "__ranked" ? " selected" : ""}>Top 25 games</option>` +
+        (evts.length ? `<optgroup label="Events">${evts.map(e => `<option value="evt:${esc(e)}"${S.conf === "evt:" + e ? " selected" : ""}>${eventIcon(games.find(g => evBase(g) === e))} ${esc(e)}</option>`).join("")}</optgroup>` : "") +
+        `<optgroup label="Power conferences">${ids.filter(id => POWER.includes(id)).map(opt).join("")}</optgroup>` +
+        `<optgroup label="Everyone else">${ids.filter(id => !POWER.includes(id)).map(opt).join("")}${other}</optgroup>`;
     sel.onchange = e => { S.conf = e.target.value; render(); };
     fr.appendChild(sel);
     v.appendChild(fr);
@@ -459,11 +722,15 @@
     if (filtered) prog.innerHTML += `<span class="fcount">${shown.length} of ${games.length} games</span>`;
     v.appendChild(prog);
 
-    if (!shown.length) { v.appendChild(el("div", "empty", `<b>No games match</b>Try a different team name or set the conference back to "All".`)); return; }
+    if (!shown.length) { v.appendChild(el("div", "empty", `<b>No games match</b>Try a different team name or set the ${POWER ? "filter" : "conference"} back to "All".`)); return; }
 
     const buildCard = (g, showDay) => {
       const mine = S.picks[S.week]?.[key(g.id, S.player)];
       const card = el("div", "game");
+      if (g.event) {
+        const [name, ...rest] = g.event.split(" - ");
+        card.appendChild(el("div", "evt", `<span class="t"><i>${eventIcon(g)}</i><b>${esc(name)}</b>${rest.length ? `<em>&nbsp;· ${esc(rest.join(" · "))}</em>` : ""}</span>${g.place ? `<span class="where">${esc(g.place)}</span>` : ""}`));
+      }
       const m = el("div", "matchup");
       m.appendChild(teamButton(g, "away", mine));
       m.appendChild(el("div", "at", g.neutral ? "VS" : "AT"));
@@ -471,7 +738,7 @@
       card.appendChild(m);
 
       const stCls = g.state === "in" ? "live" : g.completed ? "final" : "";
-      const stTxt = `${showDay ? fmtDay(g.date).slice(0, 3) + " · " : ""}${g.state === "pre" ? fmtTime(g.date) : esc(g.statusText)}${g.tv ? " · " + esc(g.tv) : ""}`;
+      const stTxt = `${showDay ? fmtDay(g.date).slice(0, 3) + " · " : ""}${g.state === "pre" ? (g.tbd ? "Time TBD" : fmtTime(g.date)) : esc(g.statusText)}${g.tv ? " · " + esc(g.tv) : ""}`;
       const gr = grade(g, mine);
       let badge = "";
       if (gr === "ok") badge = `<span class="grade ok">✓ Correct</span>`;
@@ -529,8 +796,8 @@
     const body = el("tbody");
     games.forEach(g => {
       const tr = el("tr");
-      const score = g.state !== "pre" ? `${g.away.abbr} ${g.away.score} – ${g.home.score} ${g.home.abbr}` : `${fmtDay(g.date).slice(0, 3)} ${fmtTime(g.date)}`;
-      tr.appendChild(el("td", "g", `${esc(g.away.abbr)} ${g.neutral ? "vs" : "@"} ${esc(g.home.abbr)}<small>${esc(score)}${g.completed ? " · Final" : g.state === "in" ? " · Live" : ""}</small>`));
+      const score = g.state !== "pre" ? `${g.away.abbr} ${g.away.score} – ${g.home.score} ${g.home.abbr}` : `${fmtDay(g.date).slice(0, 3)} ${g.tbd ? "TBD" : fmtTime(g.date)}`;
+      tr.appendChild(el("td", "g", `${g.event ? eventIcon(g) + " " : ""}${esc(g.away.abbr)} ${g.neutral ? "vs" : "@"} ${esc(g.home.abbr)}<small>${esc(score)}${g.completed ? " · Final" : g.state === "in" ? " · Live" : ""}</small>`));
       C.PLAYERS.forEach(p => {
         const pk = S.picks[S.week]?.[key(g.id, p)];
         const hide = C.HIDE_PICKS_UNTIL_KICKOFF && p !== S.player && !locked(g);   // viewer: S.player null hides all
@@ -548,22 +815,27 @@
     foot.innerHTML = `<tr><td>Week total</td>${C.PLAYERS.map(p => `<td>${t[p].ok}–${t[p].bad}</td>`).join("")}</tr>`;
     tb.appendChild(foot);
     v.appendChild(tb);
-    if (C.HIDE_PICKS_UNTIL_KICKOFF) v.appendChild(el("p", "note", "Other people's picks stay hidden until kickoff."));
+    if (C.HIDE_PICKS_UNTIL_KICKOFF) v.appendChild(el("p", "note", `Other people's picks stay hidden until ${SP().lock}.`));
   }
 
   async function renderStandings(v) {
     v.appendChild(el("div", "empty", "Adding up the season…"));
+    const sp = S.sport, tok = S.rtok;
     const cur = currentWeek();
     const weeks = S.calendar.filter(w => w.n <= cur).map(w => w.n);
-    await Promise.all(weeks.map(async n => { await loadWeek(n); if (!S.picks[n]) await loadPicks(n); }));
+    const one = async n => { await loadWeek(n, false, sp); if (!DATA[sp].picks[n]) await loadPicks(n, sp); };
+    if (sp === "cbb") { for (let i = 0; i < weeks.length; i += 3) await Promise.all(weeks.slice(i, i + 3).map(one)); }   // a few weeks at a time — each is 7 requests
+    else await Promise.all(weeks.map(one));
+    if (tok !== S.rtok) return;                              // they've moved on (other tab or other sport)
     v.innerHTML = "";
-    const season = {}; C.PLAYERS.forEach(p => season[p] = { ok: 0, bad: 0, weeksWon: 0 });
+    const season = {}; C.PLAYERS.forEach(p => season[p] = { ok: 0, bad: 0, weeksWon: 0, trophies: [] });
     const perWeek = weeks.map(n => {
       const t = tally(n);
       const done = (S.games[n] || []).length && (S.games[n] || []).every(g => g.completed || isVoid(g));
       const best = Math.max(...C.PLAYERS.map(p => t[p].ok));
-      C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) season[p].weeksWon++; });
-      return { n, t, done, best };
+      const occ = occOf(n);
+      C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) { season[p].weeksWon++; if (occ) season[p].trophies.push(occ.icon); } });
+      return { n, t, done, best, occ };
     });
     // Rank by wins, then fewer losses, then weeks won. Equal on all three = tied.
     const rankKey = p => [season[p].ok, -season[p].bad, season[p].weeksWon];
@@ -581,21 +853,21 @@
       const back = top - s.ok;
       const label = tot ? `${tied ? "T-" : ""}${ordinal(place)}` : "";
       pod.appendChild(el("div", "pl" + (lead ? " lead" : ""),
-        `${label ? `<div class="crown">${label}</div>` : ""}<div class="name">${esc(p)}</div><div class="rec">${s.ok}–${s.bad}</div><div class="sub">${pct}% · ${s.weeksWon} week${s.weeksWon === 1 ? "" : "s"} won${!lead && back ? ` · ${back} back` : ""}</div>`));
+        `${label ? `<div class="crown">${label}</div>` : ""}<div class="name">${esc(p)}</div><div class="rec">${s.ok}–${s.bad}</div><div class="sub">${pct}% · ${s.weeksWon} week${s.weeksWon === 1 ? "" : "s"} won${!lead && back ? ` · ${back} back` : ""}</div>${s.trophies.length ? `<div class="case" aria-label="Trophies won">${s.trophies.join(" ")}</div>` : ""}`));
     });
     v.appendChild(pod);
     const tb = el("table", "wk");
     tb.innerHTML = `<thead><tr><th>Week</th>${C.PLAYERS.map(p => `<th>${esc(p)}</th>`).join("")}</tr></thead>`;
     const body = el("tbody");
-    perWeek.slice().reverse().forEach(({ n, t, done, best }) => {
+    perWeek.slice().reverse().forEach(({ n, t, done, best, occ }) => {
       const tr = el("tr");
-      tr.appendChild(el("td", "w", `Week ${n}${done ? "" : ` <small style="color:var(--mute)">· in progress</small>`}`));
-      C.PLAYERS.forEach(p => tr.appendChild(el("td", done && t[p].ok === best && best > 0 ? "best" : "", t[p].picked ? `${t[p].ok}–${t[p].bad}` : "—")));
+      tr.appendChild(el("td", "w", `${occ ? `${occ.icon} ${esc(occ.name)}` : `Week ${n}`}${done ? "" : ` <small style="color:var(--mute)">· in progress</small>`}`));
+      C.PLAYERS.forEach(p => tr.appendChild(el("td", done && t[p].ok === best && best > 0 ? "best" : "", t[p].picked ? `${t[p].ok}–${t[p].bad}${occ && done && t[p].ok === best && best > 0 ? " " + occ.icon : ""}` : "—")));
       body.appendChild(tr);
     });
     tb.appendChild(body);
     v.appendChild(tb);
-    v.appendChild(el("p", "note", "Correct picks count 1 point each. A game left unpicked counts as a loss. Season rank: most wins, then fewest losses, then most weeks won — equal on all three is a tie. Ties for a week's best count as a week won for everyone tied."));
+    v.appendChild(el("p", "note", "Correct picks count 1 point each. A game left unpicked counts as a loss. Season rank: most wins, then fewest losses, then most weeks won — equal on all three is a tie. Ties for a week's best count as a week won for everyone tied." + (S.calendar.some(w => w.special) ? " Named weeks hand a trophy to that week's winner." : "")));
   }
 
   function renderWelcome(v) {
@@ -615,28 +887,52 @@
   }
 
   function render() {
+    S.rtok++;
     renderHeader();
     const v = $("#view"); v.innerHTML = "";
     if (!S.player && (S.tab === "picks" || !SECURE)) { renderWelcome(v); return; }
     if (S.tab === "picks") renderPicks(v);
     else if (S.tab === "sheet") renderSheet(v);
-    else renderStandings(v).catch(e => { console.error(e); v.innerHTML = `<div class="empty"><b>Couldn't load standings</b>${esc(e.message)}</div>`; });
+    else { const tok = S.rtok; renderStandings(v).catch(e => { console.error(e); if (tok === S.rtok) v.innerHTML = `<div class="empty"><b>Couldn't load standings</b>${esc(e.message)}</div>`; }); }
   }
 
   // ── boot & events ────────────────────────────────────────────────────────
   async function showWeek(n, force) {
+    const sp = S.sport, D = DATA[sp];
     try {
-      await loadWeek(n, force);
-      if (!S.picks[n] || force) await loadPicks(n);
-      S.week = n;
-      render();
+      await loadWeek(n, force, sp);
+      if (!D.picks[n] || force) await loadPicks(n, sp);
+      D.week = n;
+      if (S.sport === sp) render();
     } catch (e) {
       console.error(e);
-      $("#view").innerHTML = `<div class="empty"><b>Couldn't load</b>${esc(e.message)}. Pull to refresh or try again in a minute.</div>`;
+      if (S.sport === sp) $("#view").innerHTML = `<div class="empty"><b>Couldn't load</b>${esc(e.message)}. Pull to refresh or try again in a minute.</div>`;
     }
   }
   $("#prev").onclick = () => showWeek(S.week - 1);
   $("#next").onclick = () => showWeek(S.week + 1);
+
+  // Open whichever sport is showing: first visit loads its schedule and jumps to the current week.
+  async function openSport() {
+    const sp = S.sport, D = DATA[sp];
+    try {
+      if (D.week != null) { render(); return showWeek(D.week); }
+      if (sp === "cbb") buildHoopsCalendar(); else await loadWeek(1, false, "cfb");   // primes the calendar
+      if (S.sport !== sp) return;
+      await showWeek(currentWeek());
+    } catch (e) {
+      if (S.sport === sp) $("#view").innerHTML = `<div class="empty"><b>Couldn't reach ESPN</b>${esc(e.message)}</div>`;
+    }
+  }
+  document.querySelectorAll("#sports button").forEach(b => b.onclick = () => {
+    if (b.dataset.sport === S.sport) return;
+    S.sport = b.dataset.sport;
+    try { localStorage.setItem("pickem.sport", S.sport); } catch {}
+    S.rtok++;
+    renderHeader();
+    if (DATA[S.sport].week == null) $("#view").innerHTML = `<div class="empty">Loading…</div>`;
+    openSport();
+  });
   document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); });
 
   async function resolvePlayer() {
@@ -662,14 +958,9 @@
   }
 
   (async () => {
-    try {
-      S.player = await resolvePlayer();
-      await loadWeek(1);            // primes the calendar
-      const w = currentWeek();
-      await showWeek(w);
-    } catch (e) {
-      $("#view").innerHTML = `<div class="empty"><b>Couldn't reach ESPN</b>${esc(e.message)}</div>`;
-    }
+    try { S.player = await resolvePlayer(); } catch (e) { console.error(e); }
+    renderHeader();
+    await openSport();
     // Auto-refresh scores while games are on (every 2 minutes)
     setInterval(() => {
       if (document.hidden || S.saving || S.week == null) return;
