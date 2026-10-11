@@ -110,6 +110,12 @@
   .tabs button{padding:10px 0;border-radius:9px;font-weight:600;color:var(--ink-2);font-size:14px}
   .tabs button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
 
+  /* ── "scores updated" line ──────────────── */
+  .fresh{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin:-6px 2px 8px;font-size:12px;color:var(--mute)}
+  .fresh[hidden]{display:none}
+  .fresh button{padding:6px 4px;font-weight:600;color:var(--ink-2);text-decoration:underline;text-underline-offset:2px}
+  .fresh button:disabled{opacity:.5;text-decoration:none}
+
   /* ── filters ────────────────────────────── */
   .filters{display:flex;gap:8px;margin:0 0 10px}
   .filters input,.filters select{font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;min-height:44px;box-shadow:var(--shadow)}
@@ -253,6 +259,8 @@
     <button role="tab" data-tab="sheet">The sheet</button>
     <button role="tab" data-tab="standings">Standings</button>
   </div>
+
+  <div class="fresh" id="fresh" hidden><span id="freshat"></span><button type="button" id="refresh">Refresh</button></div>
 
   <div id="banner"></div>
   <main id="view"><div class="empty">Loading…</div></main>
@@ -672,6 +680,9 @@
       });
     }
     if (NOTIFY_ON && S.player) who.appendChild(bellButton());
+    const pulled = S.week != null && S.fetchedAt[S.week];
+    $("#fresh").hidden = S.week == null;
+    $("#freshat").textContent = pulled ? `Scores updated ${fmtTime(new Date(pulled))} ·` : "";
     const w = S.calendar.find(x => x.n === S.week);
     const occ = w?.special || null;
     $("#wlabel").textContent = occ ? `${occ.icon} ${occ.name}` : w ? w.label : S.week == null ? "Week —" : `Week ${S.week}`;
@@ -979,6 +990,19 @@
   $("#prev").onclick = () => showWeek(S.week - 1);
   $("#next").onclick = () => showWeek(S.week + 1);
 
+  // Manual refresh, for the Home Screen app where there's no browser reload button.
+  $("#refresh").onclick = async () => {
+    if (S.week == null) return;
+    const b = $("#refresh"), sp = S.sport;
+    b.disabled = true; b.textContent = "Refreshing…";
+    try {
+      const cur = currentWeek(sp);
+      if (cur !== S.week) { await loadWeek(cur, true, sp); await loadPicks(cur, sp); }   // standings count the current week too
+      await showWeek(S.week, true);
+      primedAt = 0; primeOther();
+    } finally { b.disabled = false; b.textContent = "Refresh"; }
+  };
+
   // Open whichever sport is showing: first visit loads its schedule and jumps to the current week.
   async function openSport() {
     const sp = S.sport, D = DATA[sp];
@@ -1011,7 +1035,7 @@
         const name = C.TOKEN_HASHES[await sha256(token.trim())];
         if (name && C.PLAYERS.includes(name)) {
           localStorage.setItem("pickem.token", token.trim());
-          if (urlKey) history.replaceState(null, "", location.pathname);
+          if (urlKey && !installing()) history.replaceState(null, "", location.pathname);
           return name;
         }
         if (urlKey) toast("That link isn't valid", true);
@@ -1020,7 +1044,7 @@
     }
     const q = new URLSearchParams(location.search).get("player") || decodeURIComponent(location.hash.slice(1));
     const fromUrl = C.PLAYERS.find(p => p.toLowerCase() === (q || "").toLowerCase());
-    if (fromUrl) { localStorage.setItem("pickem.player", fromUrl); history.replaceState(null, "", location.pathname); return fromUrl; }
+    if (fromUrl) { localStorage.setItem("pickem.player", fromUrl); if (!installing()) history.replaceState(null, "", location.pathname); return fromUrl; }
     const saved = localStorage.getItem("pickem.player");
     return C.PLAYERS.includes(saved) ? saved : null;
   }
@@ -1055,6 +1079,8 @@
     supported: "serviceWorker" in navigator && "PushManager" in window && "Notification" in window };
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   const isStandalone = () => navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+  // "Installing" = an iPhone or iPad in Safari that arrived via the bell's set-up link (…&install=1).
+  const installing = () => isIOS && !isStandalone() && new URLSearchParams(location.search).get("install") === "1";
   const prefs = () => { try { return { on: false, cfb: true, cbb: true, at: 0, ...(JSON.parse(localStorage.getItem("pickem.remind") || "null") || {}) }; } catch { return { on: false, cfb: true, cbb: true, at: 0 }; } };
   const savePrefs = p => { try { localStorage.setItem("pickem.remind", JSON.stringify(p)); } catch {} };
   const ub64 = t => Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - t.length % 4) % 4)), ch => ch.charCodeAt(0));
@@ -1073,7 +1099,14 @@
     const b = el("button", "bell" + (on ? " on" : ""), `<svg viewBox="0 0 24 24" fill="${on ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" fill="none"/></svg>`);
     b.id = "bell"; b.type = "button";
     b.setAttribute("aria-label", on ? "Reminders are on" : "Set up reminders");
-    b.onclick = () => { N.open = !N.open; N.msg = ""; renderRemind(); };
+    b.onclick = () => {
+      if (!N.open && isIOS && !isStandalone() && !installing()) {
+        let t = ""; try { t = localStorage.getItem("pickem.token") || ""; } catch {}
+        const who = SECURE ? (t ? "key=" + encodeURIComponent(t) : "") : "player=" + encodeURIComponent(S.player);
+        if (who) { location.replace(location.pathname + "?" + who + "&install=1"); return; }
+      }
+      N.open = !N.open; N.msg = ""; renderRemind();
+    };
     return b;
   }
 
@@ -1127,15 +1160,16 @@
   function renderRemind() {
     const box = $("#remind");
     const iosTab = isIOS && !isStandalone();
-    // On an iPhone the Home Screen version has to be added from a link that says whose phone it is.
-    if (SECURE && S.player) { let t = ""; try { t = localStorage.getItem("pickem.token") || ""; } catch {} if (t) history.replaceState(null, "", location.pathname + (N.open && iosTab ? "?key=" + encodeURIComponent(t) : "")); }
+    // Setting up on an iPhone keeps the personal link in the address while this panel is open (see the bell).
+    // Closing the panel tucks it away again.
+    if (!N.open && /[?&](key|player|install)=/.test(location.search)) history.replaceState(null, "", location.pathname);
     box.hidden = !N.open || !S.player;
     if (box.hidden) return;
     const p = prefs(), dis = N.busy ? " disabled" : "";
     let body;
     if (iosTab) body = `<p>On an iPhone or iPad, reminders only work from the Home Screen version of The Sheet. One-time setup:</p>
       <ol><li>Tap the <b>Share</b> button (the square with an arrow).</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open The Sheet from the new icon and tap the bell again.</li></ol>
-      <p>Do this with this panel open so the new icon knows it's ${esc(S.player)}'s. If you already had a Home Screen icon for The Sheet, you can delete the old one afterward.</p>`;
+      <p>Leave <b>Open as Web App</b> switched on, and do this with this panel showing so the new icon knows it's ${esc(S.player)}'s. If the new icon opens as "Viewer", paste your private link into the box it shows. An older Home Screen icon for The Sheet can be deleted afterward.</p>`;
     else if (!N.supported) body = `<p>This browser can't show notifications. Try The Sheet in Safari or Chrome.</p>`;
     else if (p.on && N.sub && Notification.permission === "granted") body = `<p>${esc(S.player)}, this device gets a morning summary when you have games to pick, and a last call about an hour before they start. Only your own games.</p>
       <label>🏈 Football reminders<input type="checkbox" data-sp="cfb"${p.cfb ? " checked" : ""}${dis}></label>
@@ -1170,7 +1204,10 @@
     if (HOOPS_ON && SPORTS[wantSport]) { S.sport = wantSport; try { localStorage.setItem("pickem.sport", wantSport); } catch {} }
     if (wantOpen && S.player) { DATA[S.sport].conf = "__open"; S.tab = "picks"; }
     if (wantSport || wantOpen) history.replaceState(null, "", location.pathname);
+    if (installing() && S.player && NOTIFY_ON) N.open = true;                 // came back from the bell's set-up reload: show the steps
+    else if (qp.get("install") && !installing()) history.replaceState(null, "", location.pathname);
     renderHeader();
+    if (N.open) renderRemind();
     await openSport();
     refreshReminders();
     setTimeout(primeOther, 1500);
