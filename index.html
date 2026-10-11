@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12211A">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-title" content="The Sheet">
 <title>The Sheet · College Football Pick'em</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,6 +44,33 @@
   .who button{padding:8px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:600;font-size:14px;color:var(--ink-2)}
   .who button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .who .me{padding:8px 14px;border-radius:999px;background:var(--ink);color:#fff;font-weight:600;font-size:14px}
+
+  /* ── reminders (bell + panel) ───────────── */
+  .who{align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .who .bell{padding:0;width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);display:grid;place-items:center;color:var(--ink-2)}
+  .who .bell svg{width:18px;height:18px}
+  .who .bell.on{background:var(--flag);border-color:var(--flag);color:var(--ink)}
+  .remind{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px 16px;margin:2px 0 10px}
+  .remind[hidden]{display:none}
+  .remind .rh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .remind .rh b{font-family:var(--display);font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.04em}
+  .remind .rh button{width:32px;height:32px;border-radius:50%;background:#E2E7E1;font-size:18px;line-height:1;color:var(--ink-2)}
+  .remind p{margin:0 0 10px;font-size:13px;color:var(--ink-2)}
+  .remind ol{margin:0 0 10px;padding-left:20px;font-size:13px;color:var(--ink-2)}
+  .remind ol li{margin-bottom:4px}
+  .remind .go{display:block;width:100%;padding:12px;border-radius:12px;background:var(--ink);color:#fff;font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:.05em;text-transform:uppercase}
+  .remind .go:disabled{opacity:.5}
+  .remind label{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid #EEF1EC;font-weight:600;font-size:14px}
+  .remind input[type=checkbox]{width:22px;height:22px;accent-color:var(--ink)}
+  .remind .row{display:flex;gap:8px;margin-top:10px}
+  .remind .row button{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--line);font-weight:600;font-size:13px;color:var(--ink-2)}
+  .remind .msg{margin:10px 0 0;font-size:13px;font-weight:600;color:var(--win)}
+  .remind .msg.err{color:var(--loss)}
+  .sports button{position:relative}
+  .sports .cnt{position:absolute;top:-5px;right:-3px;min-width:20px;padding:1px 6px;border-radius:999px;background:var(--loss);color:#fff;font-family:var(--body);font-size:11px;font-weight:700;letter-spacing:0;line-height:17px;text-align:center;box-shadow:0 0 0 2px var(--field)}
+  .welcome .paste{display:flex;gap:8px;margin-top:4px}
+  .welcome .paste input{flex:1;min-width:0;font:inherit;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px}
+  .welcome .paste button{padding:10px 16px;border-radius:10px;background:var(--ink);color:#fff;font-weight:600}
 
   /* ── sport switch ───────────────────────── */
   .sports{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#E2E7E1;padding:4px;border-radius:12px;margin:4px 0 8px}
@@ -205,6 +235,8 @@
     <div class="who" id="who"></div>
   </header>
 
+  <div class="remind" id="remind" hidden></div>
+
   <div class="sports" id="sports" role="tablist" aria-label="Sport" hidden>
     <button role="tab" data-sport="cfb"><i>🏈</i>Football</button>
     <button role="tab" data-sport="cbb"><i>🏀</i>Basketball</button>
@@ -337,6 +369,7 @@
     saving: 0,
     refocus: false,
     rtok: 0,                // bumps on every render; lets slow loads notice they're out of date
+    keep: new Set(),        // games picked while the "Unpicked" filter is on stay visible until the filter changes
     favs: (() => { try { return JSON.parse(localStorage.getItem("pickem.favs." + (window.PICKEM_CONFIG?.SEASON || "")) || "{}"); } catch { return {}; } })(),
   };
 
@@ -535,13 +568,23 @@
     return D.games[n];
   }
 
-  function currentWeek() {
-    const now = Date.now();
-    const hit = S.calendar.find(w => now >= w.start && now <= w.end);
+  function currentWeek(sp = S.sport) {
+    const cal = DATA[sp].calendar, now = Date.now();
+    const hit = cal.find(w => now >= w.start && now <= w.end);
     if (hit) return hit.n;
-    if (S.calendar.length && now < S.calendar[0].start) return S.calendar[0].n;
-    return S.calendar.length ? S.calendar[S.calendar.length - 1].n : 1;
+    if (cal.length && now < cal[0].start) return cal[0].n;
+    return cal.length ? cal[cal.length - 1].n : 1;
   }
+
+  // How many of today's games this person still has to pick, per sport (shown on the sport switch).
+  const openToday = sp => {
+    const D = DATA[sp];
+    if (!S.player || !D.calendar.length) return 0;
+    const n = currentWeek(sp), games = D.games[n], picks = D.picks[n];
+    if (!games || !picks) return 0;
+    const today = dayKey(new Date());
+    return games.filter(g => !locked(g) && !isVoid(g) && dayKey(g.date) === today && !picks[key(g.id, S.player)]).length;
+  };
 
   // ── Supabase (plain REST, no SDK) ────────────────────────────────────────
   const sb = (path, opt = {}) => fetch(`${C.SUPABASE_URL}/rest/v1/${path}`, {
@@ -568,6 +611,7 @@
     const k = key(gameId, S.player);
     const prev = D.picks[week][k];
     D.picks[week][k] = teamId;
+    if (S.conf === "__open") S.keep.add(gameId);
     render();
     if (!configured) { toast("Demo mode — add Supabase keys to save"); return; }
     S.saving++;
@@ -610,7 +654,12 @@
     $("#eyebrow").textContent = SP().eyebrow;
     document.body.dataset.sport = S.sport;
     $("#sports").hidden = !HOOPS_ON;
-    document.querySelectorAll("#sports button").forEach(b => { const on = b.dataset.sport === S.sport; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+    document.querySelectorAll("#sports button").forEach(b => {
+      const on = b.dataset.sport === S.sport; b.classList.toggle("on", on); b.setAttribute("aria-selected", on);
+      const left = openToday(b.dataset.sport);
+      let c = b.querySelector(".cnt");
+      if (left) { if (!c) { c = el("b", "cnt"); b.appendChild(c); } c.textContent = left; c.title = `${left} of today's games still to pick`; } else if (c) c.remove();
+    });
     $("#footnote").textContent = `Scores from ESPN · picks lock at ${SP().lock} · refreshes every 2 min during games`;
     const who = $("#who"); who.innerHTML = "";
     if (SECURE) {
@@ -622,6 +671,7 @@
         who.appendChild(b);
       });
     }
+    if (NOTIFY_ON && S.player) who.appendChild(bellButton());
     const w = S.calendar.find(x => x.n === S.week);
     const occ = w?.special || null;
     $("#wlabel").textContent = occ ? `${occ.icon} ${occ.name}` : w ? w.label : S.week == null ? "Week —" : `Week ${S.week}`;
@@ -670,6 +720,7 @@
     const matches = g => {
       if (S.conf.startsWith("evt:")) { if (evBase(g) !== S.conf.slice(4)) return false; }
       else if (S.conf === "__ranked") { if (!g.home.rank && !g.away.rank) return false; }
+      else if (S.conf === "__open") { if ((locked(g) || S.picks[S.week]?.[key(g.id, S.player)]) && !S.keep.has(g.id)) return false; }
       else if (S.conf === "__other") { if (CONF_NAMES[g.home.conf] && CONF_NAMES[g.away.conf]) return false; }
       else if (S.conf && g.home.conf !== S.conf && g.away.conf !== S.conf) return false;
       const q = S.q.trim().toLowerCase();
@@ -702,13 +753,15 @@
     const hasOther = allIds.some(id => !CONF_NAMES[id]);
     const opt = id => `<option value="${esc(id)}"${id === S.conf ? " selected" : ""}>${esc(CONF_NAMES[id])}</option>`;
     const other = hasOther ? `<option value="__other"${S.conf === "__other" ? " selected" : ""}>Other</option>` : "";
+    const owe = games.filter(g => !isVoid(g) && !locked(g) && !S.picks[S.week]?.[key(g.id, S.player)]).length;
+    const unpicked = `<option value="__open"${S.conf === "__open" ? " selected" : ""}>Unpicked${owe ? ` (${owe})` : ""}</option>`;
     sel.innerHTML = !POWER
-      ? `<option value="">All conferences</option>` + ids.map(opt).join("") + other
-      : `<option value="">All games</option><option value="__ranked"${S.conf === "__ranked" ? " selected" : ""}>Top 25 games</option>` +
+      ? `<option value="">All conferences</option>` + unpicked + ids.map(opt).join("") + other
+      : `<option value="">All games</option>` + unpicked + `<option value="__ranked"${S.conf === "__ranked" ? " selected" : ""}>Top 25 games</option>` +
         (evts.length ? `<optgroup label="Events">${evts.map(e => `<option value="evt:${esc(e)}"${S.conf === "evt:" + e ? " selected" : ""}>${eventIcon(games.find(g => evBase(g) === e))} ${esc(e)}</option>`).join("")}</optgroup>` : "") +
         `<optgroup label="Power conferences">${ids.filter(id => POWER.includes(id)).map(opt).join("")}</optgroup>` +
         `<optgroup label="Everyone else">${ids.filter(id => !POWER.includes(id)).map(opt).join("")}${other}</optgroup>`;
-    sel.onchange = e => { S.conf = e.target.value; render(); };
+    sel.onchange = e => { S.conf = e.target.value; S.keep.clear(); render(); };
     fr.appendChild(sel);
     v.appendChild(fr);
     if (S.refocus) { S.refocus = false; requestAnimationFrame(() => { inp.focus(); try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch {} }); }
@@ -722,6 +775,7 @@
     if (filtered) prog.innerHTML += `<span class="fcount">${shown.length} of ${games.length} games</span>`;
     v.appendChild(prog);
 
+    if (!shown.length && S.conf === "__open" && !S.q.trim()) { v.appendChild(el("div", "empty", `<b>All caught up</b>Nothing left to pick this week.`)); return; }
     if (!shown.length) { v.appendChild(el("div", "empty", `<b>No games match</b>Try a different team name or set the ${POWER ? "filter" : "conference"} back to "All".`)); return; }
 
     const buildCard = (g, showDay) => {
@@ -873,6 +927,18 @@
   function renderWelcome(v) {
     if (SECURE) {
       v.appendChild(el("div", "welcome", `<b>Private game</b><p>Picks are made through personal links. Open the link you were sent — this phone will remember you. Meanwhile you can browse <b style="font-size:inherit;display:inline;text-transform:none">The sheet</b> and <b style="font-size:inherit;display:inline;text-transform:none">Standings</b>.</p>`));
+      // A Home Screen app keeps its own memory, separate from Safari's, so give people a way to sign it in.
+      const w = v.lastChild, f = el("form", "paste");
+      f.innerHTML = `<input type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Or paste your private link here" aria-label="Paste your private link"><button type="submit">Go</button>`;
+      f.onsubmit = async e => {
+        e.preventDefault();
+        const raw = f.querySelector("input").value.trim();
+        let token = raw; try { token = new URL(raw).searchParams.get("key") || raw; } catch {}
+        const name = token && C.TOKEN_HASHES[await sha256(token.trim())];
+        if (name && C.PLAYERS.includes(name)) location.replace(location.pathname + "?key=" + encodeURIComponent(token.trim()));
+        else toast("That link isn't valid", true);
+      };
+      w.appendChild(f);
       return;
     }
     const w = el("div", "welcome", `<b>Who's picking?</b><p>Tap your name once. This phone will remember you.</p>`);
@@ -902,6 +968,7 @@
     try {
       await loadWeek(n, force, sp);
       if (!D.picks[n] || force) await loadPicks(n, sp);
+      if (D.week !== n) S.keep.clear();
       D.week = n;
       if (S.sport === sp) render();
     } catch (e) {
@@ -928,6 +995,7 @@
     if (b.dataset.sport === S.sport) return;
     S.sport = b.dataset.sport;
     try { localStorage.setItem("pickem.sport", S.sport); } catch {}
+    S.keep.clear();
     S.rtok++;
     renderHeader();
     if (DATA[S.sport].week == null) $("#view").innerHTML = `<div class="empty">Loading…</div>`;
@@ -957,17 +1025,162 @@
     return C.PLAYERS.includes(saved) ? saved : null;
   }
 
+  // ── the other sport, quietly ─────────────────────────────────────────────
+  // Loads the sport that isn't showing (current week only) so the switch can show how many of
+  // today's games are still unpicked, and so flipping over is instant. Never draws anything itself.
+  let primedAt = 0;
+  async function primeOther() {
+    if (!HOOPS_ON || !S.player || Date.now() - primedAt < 5 * 60000) return;
+    primedAt = Date.now();
+    const sp = S.sport === "cfb" ? "cbb" : "cfb", D = DATA[sp];
+    try {
+      if (sp === "cbb") buildHoopsCalendar(); else if (!D.calendar.length) await loadWeek(1, false, "cfb");
+      const n = currentWeek(sp);
+      await loadWeek(n, false, sp);
+      await loadPicks(n, sp);
+      if (D.week == null) D.week = n;
+      if (S.sport !== sp) renderHeader();
+    } catch (e) { /* the count is a nicety; the sport still loads normally when opened */ }
+  }
+
+  // ── reminders (notifications on your phone) ──────────────────────────────
+  // The app's part is small: ask permission, get this device's push address, and hand it to
+  // Supabase along with whose phone it is and which sports they want. A scheduled job in
+  // Supabase ("pickem-remind") does the checking and sending. Each phone only ever hears about
+  // its own person's unpicked games.
+  const NOTIFY_ON = C.NOTIFICATIONS !== false && !!configured;
+  // The job is labeled "pickem-remind" in Supabase, but its web address kept the name it was created with.
+  const FN_URL = `${C.SUPABASE_URL}/functions/v1/${C.REMINDER_FUNCTION || "bright-function"}`;
+  const N = { open: false, busy: false, msg: "", err: false, sub: null,
+    supported: "serviceWorker" in navigator && "PushManager" in window && "Notification" in window };
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isStandalone = () => navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+  const prefs = () => { try { return { on: false, cfb: true, cbb: true, at: 0, ...(JSON.parse(localStorage.getItem("pickem.remind") || "null") || {}) }; } catch { return { on: false, cfb: true, cbb: true, at: 0 }; } };
+  const savePrefs = p => { try { localStorage.setItem("pickem.remind", JSON.stringify(p)); } catch {} };
+  const ub64 = t => Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - t.length % 4) % 4)), ch => ch.charCodeAt(0));
+  const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const fnCall = async (method, body) => {
+    // A job that isn't deployed (or is still locked) answers without the headers a browser needs, which
+    // shows up here as a failed request rather than a status code. Treat that the same as "not there".
+    let r; try { r = await fetch(FN_URL, { method, headers: { "Content-Type": "application/json", apikey: C.SUPABASE_KEY }, body: body ? JSON.stringify(body) : undefined }); } catch { return { status: 0, ok: false, j: null }; }
+    let j = null; try { j = await r.json(); } catch {}
+    return { status: r.status, ok: r.ok, j };
+  };
+  const fail = (text, status) => Object.assign(new Error(text), { friendly: true, status });
+
+  function bellButton() {
+    const on = prefs().on && N.supported && Notification.permission === "granted";
+    const b = el("button", "bell" + (on ? " on" : ""), `<svg viewBox="0 0 24 24" fill="${on ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" fill="none"/></svg>`);
+    b.id = "bell"; b.type = "button";
+    b.setAttribute("aria-label", on ? "Reminders are on" : "Set up reminders");
+    b.onclick = () => { N.open = !N.open; N.msg = ""; renderRemind(); };
+    return b;
+  }
+
+  async function registerDevice(sub, p) {
+    const j = sub.toJSON();
+    let tz = null; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch {}
+    const r = await sb("rpc/push_register", { method: "POST", body: JSON.stringify({ p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_player: S.player, p_cfb: !!p.cfb, p_cbb: !!p.cbb && HOOPS_ON, p_tz: tz }) });
+    if (!r.ok) throw fail(r.status === 404 ? "The Supabase setup for reminders hasn't been run yet." : "Couldn't save your reminder settings. Try again in a minute.", r.status);
+  }
+
+  async function subscribeDevice() {
+    const reg = await navigator.serviceWorker.register("sw.js");
+    await navigator.serviceWorker.ready;
+    const k = await fnCall("GET");
+    if (!k.ok || !k.j?.publicKey) throw fail([0, 401, 404].includes(k.status) ? "Reminders aren't switched on yet. The reminder job (pickem-remind) hasn't been added in Supabase, or its \"Verify JWT\" setting is still on." : `The reminder job isn't answering (${k.j?.error || k.status}).`, k.status);
+    let sub = await reg.pushManager.getSubscription();
+    if (sub && sub.options?.applicationServerKey && b64u(sub.options.applicationServerKey) !== k.j.publicKey) { await sub.unsubscribe(); sub = null; }   // signed up under an old key
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: ub64(k.j.publicKey) });
+    return sub;
+  }
+
+  const working = async (job, done) => {
+    N.busy = true; N.msg = ""; N.err = false; renderRemind();
+    try { await job(); N.msg = done || ""; }
+    catch (e) { console.error(e); N.err = true; N.msg = e.friendly ? e.message : "That didn't work: " + (e.message || e); }
+    N.busy = false; renderRemind(); renderHeader();
+  };
+
+  const turnOn = () => working(async () => {
+    const perm = await Notification.requestPermission();        // has to be the first thing after the tap
+    if (perm !== "granted") throw fail(perm === "denied" ? "Notifications are blocked for The Sheet on this device. Allow them in your device's notification settings, then try again." : "No problem. Tap again whenever you want them.");
+    N.sub = await subscribeDevice();
+    const p = { ...prefs(), on: true, at: Date.now() };
+    await registerDevice(N.sub, p); savePrefs(p);
+  }, "Reminders are on.");
+
+  const turnOff = () => working(async () => {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = N.sub || (reg && await reg.pushManager.getSubscription());
+    if (sub) { await sb("rpc/push_unregister", { method: "POST", body: JSON.stringify({ p_endpoint: sub.endpoint }) }).catch(() => {}); await sub.unsubscribe().catch(() => {}); }
+    N.sub = null; savePrefs({ ...prefs(), on: false });
+  }, "Reminders are off.");
+
+  const setSport = (sp, on) => working(async () => { const p = { ...prefs(), [sp]: on, at: Date.now() }; await registerDevice(N.sub, p); savePrefs(p); }, "Saved.");
+
+  const sendTest = () => working(async () => {
+    const r = await fnCall("POST", { action: "test", endpoint: N.sub.endpoint });
+    if (!r.j?.ok) throw fail(r.status === 404 && r.j?.error ? "This device isn't signed up any more. Turn reminders off and on again." : `The test didn't go through (${r.j?.detail || r.j?.error || r.j?.status || r.status}).`);
+  }, "Test sent. It should pop up within a few seconds.");
+
+  function renderRemind() {
+    const box = $("#remind");
+    const iosTab = isIOS && !isStandalone();
+    // On an iPhone the Home Screen version has to be added from a link that says whose phone it is.
+    if (SECURE && S.player) { let t = ""; try { t = localStorage.getItem("pickem.token") || ""; } catch {} if (t) history.replaceState(null, "", location.pathname + (N.open && iosTab ? "?key=" + encodeURIComponent(t) : "")); }
+    box.hidden = !N.open || !S.player;
+    if (box.hidden) return;
+    const p = prefs(), dis = N.busy ? " disabled" : "";
+    let body;
+    if (iosTab) body = `<p>On an iPhone or iPad, reminders only work from the Home Screen version of The Sheet. One-time setup:</p>
+      <ol><li>Tap the <b>Share</b> button (the square with an arrow).</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open The Sheet from the new icon and tap the bell again.</li></ol>
+      <p>Do this with this panel open so the new icon knows it's ${esc(S.player)}'s. If you already had a Home Screen icon for The Sheet, you can delete the old one afterward.</p>`;
+    else if (!N.supported) body = `<p>This browser can't show notifications. Try The Sheet in Safari or Chrome.</p>`;
+    else if (p.on && N.sub && Notification.permission === "granted") body = `<p>${esc(S.player)}, this device gets a morning summary when you have games to pick, and a last call about an hour before they start. Only your own games.</p>
+      <label>🏈 Football reminders<input type="checkbox" data-sp="cfb"${p.cfb ? " checked" : ""}${dis}></label>
+      ${HOOPS_ON ? `<label>🏀 Basketball reminders<input type="checkbox" data-sp="cbb"${p.cbb ? " checked" : ""}${dis}></label>` : ""}
+      <div class="row"><button type="button" data-act="test"${dis}>Send a test</button><button type="button" data-act="off"${dis}>Turn off</button></div>`;
+    else body = `<p>Get a heads-up on this device when you have unpicked games: a morning summary, and a last call about an hour before they start. Only your own games, and you can turn it off any time.</p>
+      <button type="button" class="go" data-act="on"${dis}>${N.busy ? "Working…" : "Turn on reminders"}</button>`;
+    box.innerHTML = `<div class="rh"><b>Reminders</b><button type="button" data-act="close" aria-label="Close">×</button></div>${body}${N.msg ? `<p class="msg${N.err ? " err" : ""}">${esc(N.msg)}</p>` : ""}`;
+    box.querySelectorAll("[data-act]").forEach(b => b.onclick = () => ({ on: turnOn, off: turnOff, test: sendTest, close: () => { N.open = false; renderRemind(); } })[b.dataset.act]());
+    box.querySelectorAll("input[data-sp]").forEach(c => c.onchange = () => setSport(c.dataset.sp, c.checked));
+  }
+
+  // Once a day, quietly make sure this device is still signed up (phones occasionally drop a subscription).
+  async function refreshReminders() {
+    const p = prefs();
+    if (!NOTIFY_ON || !S.player || !p.on || !N.supported) return;
+    try {
+      if (Notification.permission !== "granted") { savePrefs({ ...p, on: false }); return; }
+      const reg = await navigator.serviceWorker.register("sw.js");
+      let sub = await reg.pushManager.getSubscription(), fresh = false;
+      if (!sub) { sub = await subscribeDevice(); fresh = true; }
+      N.sub = sub;
+      if (fresh || Date.now() - (p.at || 0) > 20 * 3600e3) { await registerDevice(sub, p); savePrefs({ ...p, at: Date.now() }); }
+    } catch (e) { console.warn("reminders:", e.message || e); }
+    renderHeader(); if (N.open) renderRemind();
+  }
+
   (async () => {
+    // A tapped reminder opens e.g. ?sport=cbb&f=open: go to that sport with the Unpicked filter on.
+    const qp = new URLSearchParams(location.search), wantSport = qp.get("sport"), wantOpen = qp.get("f") === "open";
     try { S.player = await resolvePlayer(); } catch (e) { console.error(e); }
+    if (HOOPS_ON && SPORTS[wantSport]) { S.sport = wantSport; try { localStorage.setItem("pickem.sport", wantSport); } catch {} }
+    if (wantOpen && S.player) { DATA[S.sport].conf = "__open"; S.tab = "picks"; }
+    if (wantSport || wantOpen) history.replaceState(null, "", location.pathname);
     renderHeader();
     await openSport();
+    refreshReminders();
+    setTimeout(primeOther, 1500);
     // Auto-refresh scores while games are on (every 2 minutes)
     setInterval(() => {
       if (document.hidden || S.saving || S.week == null) return;
       const live = (S.games[S.week] || []).some(g => g.state === "in" || (g.state === "pre" && g.date - Date.now() < 3600000));
       if (live && S.tab !== "standings") showWeek(S.week, true);
     }, 120000);
-    document.addEventListener("visibilitychange", () => { if (!document.hidden && S.week != null) showWeek(S.week, true); });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && S.week != null) { showWeek(S.week, true); primeOther(); } });
   })();
 })();
 </script>
