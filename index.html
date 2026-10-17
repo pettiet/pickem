@@ -94,7 +94,19 @@
   .evt .t em{font-style:normal;flex:none;max-width:55%;overflow:hidden;text-overflow:ellipsis}   /* the round stays readable; a long event name shortens first */
   .evt .t i{font-style:normal;font-size:14px;margin-right:6px;letter-spacing:0}
   .evt .where{flex:none;color:var(--mute);font-weight:500}
-  .pl .case{margin-top:8px;font-size:20px;letter-spacing:3px;line-height:1}
+  .pl .case{margin-top:8px;font-size:20px;letter-spacing:3px;line-height:1.3}
+  .emo{width:1em;height:1em;vertical-align:-.15em;display:inline-block}
+  /* trophy games (football postseason): highlighted card + total-points tiebreaker */
+  .game.trophy{box-shadow:0 0 0 2px var(--flag),var(--shadow)}
+  .tbk{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid #EEF1EC;background:#FBF8EE}
+  .tbk .ti{font-size:26px;line-height:1;flex:none}
+  .tbk .tx{flex:1;min-width:0}
+  .tbk .tx b{display:block;font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.04em;text-transform:uppercase}
+  .tbk .tx small{display:block;font-size:12px;color:var(--ink-2);line-height:1.35}
+  .tbk label{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;flex:none}
+  .tbk input{width:66px;font:inherit;font-size:18px;font-weight:700;text-align:center;border:1.5px solid var(--line);border-radius:10px;padding:6px 4px;color:var(--ink);background:#fff}
+  .tbk input:focus{outline:3px solid var(--flag);outline-offset:1px;border-color:var(--ink)}
+  .sheet .p small{display:block;font-family:var(--body);font-size:10px;font-weight:500;color:var(--mute);text-decoration:none}
 
   /* ── week bar ───────────────────────────── */
   .weekbar{display:flex;align-items:center;justify-content:space-between;background:var(--bar,var(--ink));color:#fff;border-radius:var(--radius);padding:6px 6px;margin:6px 0 10px;box-shadow:var(--shadow)}
@@ -109,6 +121,12 @@
   .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#E2E7E1;padding:4px;border-radius:12px;margin-bottom:12px}
   .tabs button{padding:10px 0;border-radius:9px;font-weight:600;color:var(--ink-2);font-size:14px}
   .tabs button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+
+  /* ── "scores updated" line ──────────────── */
+  .fresh{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin:-6px 2px 8px;font-size:12px;color:var(--mute)}
+  .fresh[hidden]{display:none}
+  .fresh button{padding:6px 4px;font-weight:600;color:var(--ink-2);text-decoration:underline;text-underline-offset:2px}
+  .fresh button:disabled{opacity:.5;text-decoration:none}
 
   /* ── filters ────────────────────────────── */
   .filters{display:flex;gap:8px;margin:0 0 10px}
@@ -254,6 +272,8 @@
     <button role="tab" data-tab="standings">Standings</button>
   </div>
 
+  <div class="fresh" id="fresh" hidden><span id="freshat"></span><button type="button" id="refresh">Refresh</button></div>
+
   <div id="banner"></div>
   <main id="view"><div class="empty">Loading…</div></main>
   <p class="note" id="footnote">Scores from ESPN · picks lock at kickoff · refreshes every 2 min during games</p>
@@ -338,6 +358,44 @@
     for (const [re, v] of EVENT_ICONS) if (re.test(name)) return v;
     return PLACE_ICONS[g.region] || "🏟️";
   };
+  // Football named weeks. Regular-season ones are found by date; the postseason ones come from ESPN's bowl list.
+  const FB_OCC = {
+    halloween: { name: "Halloween Week",     icon: "🎃", prize: "the pumpkin", blurb: "Spooky Saturday.",                 accent: "#F07A1A", bar: "linear-gradient(135deg,#1A1A1A,#4A2A0A)" },
+    rivalry:   { name: "Rivalry Week",       icon: "🪓", prize: "the axe",     blurb: "Thanksgiving rivalry weekend.",     accent: "#E0573F", bar: "linear-gradient(135deg,#2A1210,#5A1F17)" },
+    champs:    { name: "Championship Week",  icon: "💍", prize: "the ring",    blurb: "Conference title games.",           accent: "#E0B03A", bar: "linear-gradient(135deg,#101B36,#243B6B)" },
+    armynavy:  { name: "Army-Navy Week",     icon: "🎖️", prize: "the medal",   blurb: "America's Game.",                   accent: "#C8A951", bar: "linear-gradient(135deg,#0B1F3A,#3A3A3A)" },
+    bowl:      { name: "Bowl Week",          icon: "🥣", prize: "the bowl",    blurb: "Bowl season.",                      accent: "#E08A2B", bar: "linear-gradient(135deg,#123B2A,#7A4A14)" },
+    cfp:       { name: "College Football Playoff", icon: "🏆", prize: null, blurb: "Every playoff game has its own trophy. Tiebreaker: closest total points.", accent: "#F2B705", bar: "linear-gradient(135deg,#111111,#3A3320)" },
+    title:     { name: "National Championship", icon: "👑", prize: null, blurb: "One game for the crown. Tiebreaker: closest total points.", accent: "#F2B705", bar: "linear-gradient(135deg,#2A2208,#5C4A12)" },
+  };
+  // There's no toaster emoji, so the Pop-Tarts trophy is a tiny drawing.
+  const TOASTER = `<svg class="emo" viewBox="0 0 32 32" role="img" aria-label="toaster"><rect x="9" y="3" width="6" height="11" rx="2" fill="#E8B76A" stroke="#9A6A2E" stroke-width="1.2"/><rect x="17" y="3" width="6" height="11" rx="2" fill="#E8B76A" stroke="#9A6A2E" stroke-width="1.2"/><rect x="3" y="11" width="24" height="16" rx="5" fill="#C9D1D9" stroke="#5E6B78" stroke-width="1.4"/><rect x="7" y="15" width="16" height="2.4" rx="1.2" fill="#8C98A5"/><rect x="27" y="15" width="3" height="6" rx="1.2" fill="#5E6B78"/><rect x="7" y="27" width="4" height="2.5" rx="1" fill="#5E6B78"/><rect x="19" y="27" width="4" height="2.5" rx="1" fill="#5E6B78"/></svg>`;
+  // Trophy games: every playoff game, plus a few favorite bowls. Matched on ESPN's game name.
+  const TROPHY_BOWLS = [
+    [/rose bowl/i, "🌹", "Rose Bowl"], [/orange bowl/i, "🍊", "Orange Bowl"], [/sugar bowl/i, "🍭", "Sugar Bowl"],
+    [/cotton bowl/i, "🤠", "Cotton Bowl"], [/fiesta bowl/i, "🪅", "Fiesta Bowl"], [/peach bowl/i, "🍑", "Peach Bowl"],
+    [/pop-?tarts/i, TOASTER, "Pop-Tarts Bowl"], [/mayo/i, "🪣", "Duke's Mayo Bowl"], [/cheez-?it|citrus bowl/i, "🧀", "Citrus Bowl"],
+    [/potato bowl/i, "🥔", "Potato Bowl"], [/gator bowl/i, "🐊", "Gator Bowl"], [/\bsun bowl/i, "🌞", "Sun Bowl"],
+    [/hawai/i, "🌺", "Hawaiʻi Bowl"], [/pinstripe/i, "🗽", "Pinstripe Bowl"],
+  ];
+  const CFP_ROUNDS = [[/first round/i, 21, "CFP First Round"], [/quarterfinal/i, 22, "CFP Quarterfinals"], [/semifinal/i, 23, "CFP Semifinals"], [/national championship/i, 24, "National Championship"]];
+  const tagIcon = g => g.trophy ? g.trophy.icon : g.post ? (g.cfp ? "🏈" : "🥣") : eventIcon(g);
+
+  // Who takes a trophy game: of those who picked the winner, the closest total points.
+  // Nobody picked the winner: closest total among everyone. Still level: they share it.
+  function trophyWinners(g, week, sp = S.sport) {
+    if (!g.trophy || !g.completed || !g.winner) return [];
+    const D = DATA[sp], picks = D.picks[week] || {}, tb = D.tb[week] || {};
+    const total = g.home.score + g.away.score;
+    const right = C.PLAYERS.filter(p => picks[key(g.id, p)] === g.winner);
+    const pool = right.length ? right : C.PLAYERS.filter(p => tb[key(g.id, p)] != null);
+    const off = p => tb[key(g.id, p)] != null ? Math.abs(tb[key(g.id, p)] - total) : Infinity;
+    const best = Math.min(...pool.map(off));
+    if (!pool.length) return [];
+    if (best === Infinity) return right;
+    return pool.filter(p => off(p) === best);
+  }
+
   const occOf = n => S.calendar.find(w => w.n === n)?.special || null;
   const listNames = a => a.length < 2 ? a.join("") : a.length === 2 ? a.join(" and ") : `${a.slice(0, -1).join(", ")} and ${a[a.length - 1]}`;
 
@@ -360,6 +418,7 @@
     q: "",                  // search text (My picks)
     conf: "",               // conference filter (My picks)
     all: {}, days: {}, frozen: {}, noTable: false,   // basketball only
+    tb: {}, noTb: false, post: {},                   // football postseason: tiebreaker totals, bowl/playoff list
   });
   const DATA = { cfb: mkData(), cbb: mkData() };
   const S = {
@@ -370,6 +429,7 @@
     refocus: false,
     rtok: 0,                // bumps on every render; lets slow loads notice they're out of date
     keep: new Set(),        // games picked while the "Unpicked" filter is on stay visible until the filter changes
+    tbDraft: {},            // tiebreaker numbers being typed, so a score refresh doesn't wipe them
     favs: (() => { try { return JSON.parse(localStorage.getItem("pickem.favs." + (window.PICKEM_CONFIG?.SEASON || "")) || "{}"); } catch { return {}; } })(),
   };
 
@@ -407,7 +467,7 @@
   const idealText = hex => { const n = parseInt(hex, 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (r*299 + g*587 + b*114) / 1000 > 165 ? "#12211A" : "#fff"; };
 
   // ── ESPN ─────────────────────────────────────────────────────────────────
-  function normalize(ev, day) {
+  function normalize(ev, day, post) {
     const c = ev.competitions[0];
     const t = side => {
       const x = c.competitors.find(k => k.homeAway === side);
@@ -435,16 +495,99 @@
       if (event && c.neutralSite) place = c.venue?.address?.city || "";
       if (event) region = c.venue?.address?.state || c.venue?.address?.country || "";
     }
+    // Football postseason: bowl / playoff name, cleaned up, and whether it's a trophy game.
+    let cfp = false, round = null, trophy = null;
+    if (post) {
+      const head = ((c.notes || []).find(x => x.headline)?.headline || "").trim();
+      cfp = /college football playoff/i.test(head);
+      if (c.timeValid === false) {   // no kickoff time yet: ESPN uses midnight Eastern of the game day
+        tbd = true;
+        const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date(ev.date)).split("-").map(Number);
+        date = new Date(y, m - 1, d, 23, 59);
+      }
+      if (cfp) {
+        round = CFP_ROUNDS.find(([re]) => re.test(head)) || null;
+        const at = head.split(/ at the /i)[1] || "";
+        const bowl = (at.replace(/\s+presented by.*$/i, "").match(/([A-Z][\w'ʻ.-]*\s+Bowl)/g) || []).pop() || "";
+        const r = round ? round[2].replace(/s$/, "").replace(/^CFP /, "") : "Playoff";
+        event = round && round[1] === 24 ? "CFP National Championship" : round && round[1] === 21 ? "CFP First Round" : bowl ? `${bowl} - CFP ${r}` : `College Football Playoff - ${r}`;
+        if (round && round[1] === 24) trophy = { icon: "👑", name: "National Championship" };
+        else if (round && round[1] === 21) trophy = { icon: "🏟️", name: "CFP First Round" };
+        else { const t = TROPHY_BOWLS.find(([re]) => re.test(bowl || head)); trophy = t ? { icon: t[1], name: t[2] } : { icon: "🏆", name: bowl || "Playoff" }; }
+      } else {
+        event = head;
+        const t = TROPHY_BOWLS.find(([re]) => re.test(head));
+        if (t) trophy = { icon: t[1], name: t[2] };
+      }
+      if (event && c.neutralSite) place = c.venue?.address?.city || "";
+    }
     return {
-      id: ev.id, date, tbd, event, place, region, home, away, winner,
+      id: ev.id, date, tbd, event, place, region, home, away, winner, post: !!post, cfp, round: round ? round[1] : null, trophy,
       state: st.state, completed: !!st.completed, statusName: st.name || "", statusText: st.shortDetail || st.description || "",
       tv: c.broadcasts?.[0]?.names?.join("/") || "", neutral: !!c.neutralSite,
     };
   }
 
+  // Football named weeks in the regular season, found by date so they land right every year.
+  function tagFootballWeeks(D) {
+    if (C.FOOTBALL_OCCASIONS === false) return;
+    const Y = C.SEASON, noon = (m, d) => new Date(Y, m, d, 12);
+    const weekOf = d => D.calendar.find(w => w.n > 0 && d >= w.start && d <= w.end);
+    const nov1 = noon(10, 1), thanks = new Date(+nov1 + (((4 - nov1.getDay() + 7) % 7) + 21) * 864e5);
+    const dec1 = noon(11, 1), sat2 = new Date(+dec1 + (((6 - dec1.getDay() + 7) % 7) + 7) * 864e5);   // second Saturday of December
+    const tag = (w, k) => { if (w && !w.special) w.special = FB_OCC[k]; };
+    tag(weekOf(sat2), "armynavy");
+    tag(weekOf(new Date(+thanks + 9 * 864e5)), "champs");      // the Saturday after Thanksgiving weekend
+    tag(weekOf(new Date(+thanks + 2 * 864e5)), "rivalry");     // Thanksgiving weekend
+    tag(weekOf(noon(9, 31)), "halloween");
+  }
+
+  // Football postseason: ESPN lists every bowl and playoff game as one long "week". The app splits it:
+  // regular bowls Monday to Sunday (Bowl Week 1, 2, 3…, saved as weeks 16-19) and each playoff round on
+  // its own (saved as weeks 21-24). Week numbers are fixed, so saved picks always find their game.
+  async function loadPost(force) {
+    const D = DATA.cfb, P = D.post;
+    if (P.list && !force && Date.now() - (P.at || 0) < 120000) return P.list;
+    if (P.pending) return P.pending;
+    P.pending = (async () => {
+      const r = await fetch(`${ESPN}?groups=${C.ESPN_GROUP}&seasontype=3&week=1&dates=${C.SEASON}&limit=500`);
+      if (!r.ok) throw new Error("ESPN " + r.status);
+      const j = await r.json();
+      const dayStart = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const s0 = dayStart(P.start || new Date(C.SEASON, 11, 13));
+      const mon = new Date(+s0 + ((8 - s0.getDay()) % 7) * 864e5);   // first Monday on or after the postseason start
+      const list = (j.events || []).map(ev => normalize(ev, null, true));
+      list.forEach(g => {
+        if (g.cfp && g.round) g.wk = g.round;
+        else g.wk = 16 + Math.max(0, Math.min(3, Math.floor((dayStart(g.date) - mon) / (7 * 864e5))));
+      });
+      P.list = list; P.at = Date.now();
+      // (Re)build the postseason part of the calendar from whichever games ESPN has posted.
+      const fd = d => d.toLocaleDateString([], { month: "short", day: "numeric" });
+      const entries = [...new Set(list.map(g => g.wk))].map(n => {
+        const gs = list.filter(g => g.wk === n), first = dayStart(new Date(Math.min(...gs.map(g => +g.date)))), last = dayStart(new Date(Math.max(...gs.map(g => +g.date))));
+        const isBowl = n < 20, cfpRound = CFP_ROUNDS.find(r => r[1] === n);
+        const label = isBowl ? `Bowl Week ${n - 15}` : cfpRound[2];
+        const special = { ...(isBowl ? FB_OCC.bowl : n === 24 ? FB_OCC.title : FB_OCC.cfp), name: label };
+        return { n, label, detail: +first === +last ? fd(first) : `${fd(first)}–${fd(last)}`, start: first, end: new Date(+last + 28 * 3600e3 - 1), special, post: true };
+      });
+      D.calendar = [...D.calendar.filter(w => !w.post), ...entries].sort((a, b) => a.start - b.start || a.n - b.n);
+      return list;
+    })();
+    try { return await P.pending; } finally { P.pending = null; }
+  }
+
   async function loadWeek(n, force, sp = S.sport) {
     if (sp === "cbb") return loadHoopsWeek(n, force);
     const D = DATA.cfb;
+    if (n >= 16) {   // bowls and playoff
+      const stale = Date.now() - (D.fetchedAt[n] || 0) > 120000;
+      if (D.games[n] && !stale && !force) return D.games[n];
+      const list = await loadPost(force || stale);
+      D.games[n] = list.filter(g => g.wk === n).sort((a, b) => a.date - b.date);
+      D.fetchedAt[n] = Date.now();
+      return D.games[n];
+    }
     const stale = Date.now() - (D.fetchedAt[n] || 0) > 120000;
     if (D.games[n] && !stale && !force) return D.games[n];
     const url = `${ESPN}?groups=${C.ESPN_GROUP}&seasontype=2&week=${dbWeek(n, "cfb")}&dates=${C.SEASON}&limit=500`;
@@ -461,6 +604,10 @@
         D.calendar.unshift({ n: 0, label: "Week 0", detail: `${fd(w1.start)}–${fd(new Date(WEEK0_END - 1))}`, start: w1.start, end: new Date(WEEK0_END - 1) });
         w1.start = WEEK0_END; w1.detail = `${fd(WEEK0_END)}–${fd(w1.end)}`;
       }
+      const postCal = (j.leagues?.[0]?.calendar || []).find(x => x.value === "3")?.entries?.[0];
+      D.post.start = postCal ? new Date(postCal.startDate) : new Date(C.SEASON, 11, 13);
+      tagFootballWeeks(D);
+      try { await loadPost(); } catch (e) { console.warn("postseason:", e.message || e); }   // not posted yet: regular season only
     }
     let evs = (j.events || []).map(ev => normalize(ev));
     if (n === 0) evs = evs.filter(g => g.date < WEEK0_END);
@@ -572,7 +719,8 @@
     const cal = DATA[sp].calendar, now = Date.now();
     const hit = cal.find(w => now >= w.start && now <= w.end);
     if (hit) return hit.n;
-    if (cal.length && now < cal[0].start) return cal[0].n;
+    const next = cal.find(w => now < w.start);   // between weeks (or before the season): the next one up
+    if (next) return next.n;
     return cal.length ? cal[cal.length - 1].n : 1;
   }
 
@@ -602,6 +750,40 @@
     rows.forEach(x => m[key(x.game_id, x.player)] = x.pick);
     D.picks[week] = m;
     if (sp === "cbb") { D.noTable = false; hoopsFilter(week); }
+    if (sp === "cfb" && week >= 16) {   // postseason: tiebreaker totals too
+      const t = await sb(`tiebreakers?season=eq.${T.season}&week=eq.${week}&select=game_id,player,total`);
+      if (t.status === 404) { D.noTb = true; D.tb[week] = {}; return; }
+      if (!t.ok) throw new Error("Supabase " + t.status);
+      const tm = {}; (await t.json()).forEach(x => tm[key(x.game_id, x.player)] = x.total);
+      D.tb[week] = tm; D.noTb = false;
+    }
+  }
+
+  async function saveTotal(week, gameId, raw) {
+    const D = DATA[S.sport], T = SPORTS[S.sport];
+    if (!S.player || D.noTb || String(raw).trim() === "") return;
+    const v = Math.round(Number(raw));
+    if (!Number.isFinite(v) || v < 0 || v > 250) { toast("Total points: a number from 0 to 250", true); delete S.tbDraft[gameId]; render(); return; }
+    D.tb[week] = D.tb[week] || {};
+    const k = key(gameId, S.player), prev = D.tb[week][k];
+    delete S.tbDraft[gameId];
+    if (prev === v) return;
+    D.tb[week][k] = v;
+    if (!configured) { toast("Demo mode — add Supabase keys to save"); return; }
+    S.saving++;
+    try {
+      const r = await sb("tiebreakers?on_conflict=season,week,game_id,player", {
+        method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ season: T.season, week, game_id: gameId, player: S.player, total: v }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      toast(`Tiebreaker saved: ${v}`);
+    } catch (e) {
+      console.error(e);
+      if (prev == null) delete D.tb[week][k]; else D.tb[week][k] = prev;
+      render();
+      toast("Couldn't save — check connection", true);
+    } finally { S.saving--; }
   }
 
   async function savePick(week, gameId, teamId) {
@@ -672,14 +854,18 @@
       });
     }
     if (NOTIFY_ON && S.player) who.appendChild(bellButton());
+    const pulled = S.week != null && S.fetchedAt[S.week];
+    $("#fresh").hidden = S.week == null;
+    $("#freshat").textContent = pulled ? `Scores updated ${fmtTime(new Date(pulled))} ·` : "";
     const w = S.calendar.find(x => x.n === S.week);
     const occ = w?.special || null;
     $("#wlabel").textContent = occ ? `${occ.icon} ${occ.name}` : w ? w.label : S.week == null ? "Week —" : `Week ${S.week}`;
     $("#wdates").textContent = !w ? "" : occ ? `${w.label} · ${w.detail}` : w.detail;
     const bs = document.body.style;
     if (occ) { bs.setProperty("--flag", occ.accent); bs.setProperty("--bar", occ.bar); } else { bs.removeProperty("--flag"); bs.removeProperty("--bar"); }
-    $("#prev").disabled = !S.calendar.length || S.week <= S.calendar[0].n;
-    $("#next").disabled = !S.calendar.length || S.week >= S.calendar[S.calendar.length - 1].n;
+    const wi = S.calendar.findIndex(x => x.n === S.week);
+    $("#prev").disabled = wi <= 0;
+    $("#next").disabled = wi < 0 || wi >= S.calendar.length - 1;
     document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
     $("#banner").innerHTML = !configured ? `<div class="banner"><b>Demo mode.</b> Picks aren't being saved yet — open <code>config.js</code> and paste in your Supabase URL and anon key.</div>`
       : DATA[S.sport].noTable ? `<div class="banner"><b>Basketball isn't switched on yet.</b> You can browse the schedule, but picks can't be saved until the one-time Supabase setup is run (<code>supabase-basketball.sql</code>). Football is unaffected.</div>` : "";
@@ -707,7 +893,7 @@
       const tt = tally(S.week), top = Math.max(...C.PLAYERS.map(p => tt[p].ok));
       const over = games.length && games.every(g => g.completed || isVoid(g));
       const champs = over && top > 0 ? C.PLAYERS.filter(p => tt[p].ok === top) : [];
-      const line = champs.length ? `${esc(listNames(champs))} ${champs.length > 1 ? "share" : "took"} ${occ.prize}.` : `${occ.blurb} Most wins this week takes ${occ.prize}.`;
+      const line = !occ.prize ? occ.blurb : champs.length ? `${esc(listNames(champs))} ${champs.length > 1 ? "share" : "took"} ${occ.prize}.` : `${occ.blurb} Most wins this week takes ${occ.prize}.` + (games.some(g => g.trophy) ? " Highlighted games carry their own trophy." : "");
       v.appendChild(el("div", "occ", `<i>${occ.icon}</i><div><b>${esc(occ.name)}</b><span>${line}</span></div>`));
     }
     if (!games.length) { v.appendChild(el("div", "empty", "<b>No games yet</b>ESPN hasn't posted this week's schedule.")); return; }
@@ -778,18 +964,44 @@
     if (!shown.length && S.conf === "__open" && !S.q.trim()) { v.appendChild(el("div", "empty", `<b>All caught up</b>Nothing left to pick this week.`)); return; }
     if (!shown.length) { v.appendChild(el("div", "empty", `<b>No games match</b>Try a different team name or set the ${POWER ? "filter" : "conference"} back to "All".`)); return; }
 
+    // Trophy game strip: what's at stake, the total-points tiebreaker, and (when final) who won it.
+    const trophyBar = (g, mine) => {
+      const D = DATA[S.sport], tb = D.tb[S.week] || {}, myTotal = tb[key(g.id, S.player)];
+      const total = g.home.score + g.away.score;
+      let line, input = "";
+      if (D.noTb) line = "The total-points tiebreaker needs a one-time Supabase setup.";
+      else if (g.state === "pre") {
+        const val = S.tbDraft[g.id] ?? (myTotal ?? "");
+        line = mine ? (myTotal != null ? "Tiebreaker saved. You can change it until kickoff." : "Now guess the total points scored by both teams.") : "Pick a winner, then guess total points for the tiebreaker.";
+        input = `<label>Total pts<input type="number" inputmode="numeric" min="0" max="250" step="1" data-tb="${esc(g.id)}" value="${esc(val)}" aria-label="Total points tiebreaker for ${esc(g.trophy.name)}"></label>`;
+      } else if (!g.completed) line = `Your total: ${myTotal ?? "none"} · Live total: ${total}`;
+      else {
+        const w = trophyWinners(g, S.week);
+        line = `${w.length ? `<b style="display:inline;font:inherit;text-transform:none;letter-spacing:0">${esc(listNames(w))} ${w.length > 1 ? "share it" : "wins it"}.</b> ` : "No winner. "}Final total ${total}` + (myTotal != null ? ` · You: ${myTotal} (${Math.abs(myTotal - total)} off)` : "");
+      }
+      const bar = el("div", "tbk", `<span class="ti">${g.trophy.icon}</span><div class="tx"><b>${esc(g.trophy.name)} trophy</b><small>${line}</small></div>${input}`);
+      const inp = bar.querySelector("input");
+      if (inp) {
+        inp.oninput = e => { S.tbDraft[g.id] = e.target.value; };
+        inp.onchange = e => saveTotal(S.week, g.id, e.target.value);
+        inp.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } };
+      }
+      return bar;
+    };
+
     const buildCard = (g, showDay) => {
       const mine = S.picks[S.week]?.[key(g.id, S.player)];
-      const card = el("div", "game");
+      const card = el("div", "game" + (g.trophy ? " trophy" : ""));
       if (g.event) {
         const [name, ...rest] = g.event.split(" - ");
-        card.appendChild(el("div", "evt", `<span class="t"><i>${eventIcon(g)}</i><b>${esc(name)}</b>${rest.length ? `<em>&nbsp;· ${esc(rest.join(" · "))}</em>` : ""}</span>${g.place ? `<span class="where">${esc(g.place)}</span>` : ""}`));
+        card.appendChild(el("div", "evt", `<span class="t"><i>${tagIcon(g)}</i><b>${esc(name)}</b>${rest.length ? `<em>&nbsp;· ${esc(rest.join(" · "))}</em>` : ""}</span>${g.place ? `<span class="where">${esc(g.place)}</span>` : ""}`));
       }
       const m = el("div", "matchup");
       m.appendChild(teamButton(g, "away", mine));
       m.appendChild(el("div", "at", g.neutral ? "VS" : "AT"));
       m.appendChild(teamButton(g, "home", mine));
       card.appendChild(m);
+      if (g.trophy) card.appendChild(trophyBar(g, mine));
 
       const stCls = g.state === "in" ? "live" : g.completed ? "final" : "";
       const stTxt = `${showDay ? fmtDay(g.date).slice(0, 3) + " · " : ""}${g.state === "pre" ? (g.tbd ? "Time TBD" : fmtTime(g.date)) : esc(g.statusText)}${g.tv ? " · " + esc(g.tv) : ""}`;
@@ -851,7 +1063,7 @@
     games.forEach(g => {
       const tr = el("tr");
       const score = g.state !== "pre" ? `${g.away.abbr} ${g.away.score} – ${g.home.score} ${g.home.abbr}` : `${fmtDay(g.date).slice(0, 3)} ${g.tbd ? "TBD" : fmtTime(g.date)}`;
-      tr.appendChild(el("td", "g", `${g.event ? eventIcon(g) + " " : ""}${esc(g.away.abbr)} ${g.neutral ? "vs" : "@"} ${esc(g.home.abbr)}<small>${esc(score)}${g.completed ? " · Final" : g.state === "in" ? " · Live" : ""}</small>`));
+      tr.appendChild(el("td", "g", `${g.event ? tagIcon(g) + " " : ""}${esc(g.away.abbr)} ${g.neutral ? "vs" : "@"} ${esc(g.home.abbr)}<small>${esc(score)}${g.completed ? " · Final" : g.state === "in" ? " · Live" : ""}</small>`));
       C.PLAYERS.forEach(p => {
         const pk = S.picks[S.week]?.[key(g.id, p)];
         const hide = C.HIDE_PICKS_UNTIL_KICKOFF && p !== S.player && !locked(g);   // viewer: S.player null hides all
@@ -859,7 +1071,9 @@
         if (!pk) { const gr = grade(g, pk); cls += gr === "bad" ? " bad" : " none"; if (gr === "bad") txt = "none"; }
         else if (hide) { cls += " hid"; txt = "hidden"; }
         else { txt = pk === g.home.id ? g.home.abbr : g.away.abbr; const gr = grade(g, pk); if (gr === "ok") cls += " ok"; if (gr === "bad") cls += " bad"; }
-        tr.appendChild(el("td", cls, esc(txt)));
+        const tot = g.trophy && !hide ? DATA[S.sport].tb[S.week]?.[key(g.id, p)] : null;
+        const won = g.trophy && trophyWinners(g, S.week).includes(p) ? " " + g.trophy.icon : "";
+        tr.appendChild(el("td", cls, esc(txt) + won + (tot != null ? `<small>${tot} pts</small>` : "")));
       });
       body.appendChild(tr);
     });
@@ -876,7 +1090,7 @@
     v.appendChild(el("div", "empty", "Adding up the season…"));
     const sp = S.sport, tok = S.rtok;
     const cur = currentWeek();
-    const weeks = S.calendar.filter(w => w.n <= cur).map(w => w.n);
+    const weeks = S.calendar.slice(0, S.calendar.findIndex(w => w.n === cur) + 1).map(w => w.n);
     const one = async n => { await loadWeek(n, false, sp); if (!DATA[sp].picks[n]) await loadPicks(n, sp); };
     if (sp === "cbb") { for (let i = 0; i < weeks.length; i += 3) await Promise.all(weeks.slice(i, i + 3).map(one)); }   // a few weeks at a time — each is 7 requests
     else await Promise.all(weeks.map(one));
@@ -888,7 +1102,8 @@
       const done = (S.games[n] || []).length && (S.games[n] || []).every(g => g.completed || isVoid(g));
       const best = Math.max(...C.PLAYERS.map(p => t[p].ok));
       const occ = occOf(n);
-      C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) { season[p].weeksWon++; if (occ) season[p].trophies.push(occ.icon); } });
+      C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) { season[p].weeksWon++; if (occ?.prize) season[p].trophies.push(occ.icon); } });
+      (S.games[n] || []).forEach(g => trophyWinners(g, n, sp).forEach(p => season[p].trophies.push(g.trophy.icon)));   // trophy games
       return { n, t, done, best, occ };
     });
     // Rank by wins, then fewer losses, then weeks won. Equal on all three = tied.
@@ -916,12 +1131,12 @@
     perWeek.slice().reverse().forEach(({ n, t, done, best, occ }) => {
       const tr = el("tr");
       tr.appendChild(el("td", "w", `${occ ? `${occ.icon} ${esc(occ.name)}` : `Week ${n}`}${done ? "" : ` <small style="color:var(--mute)">· in progress</small>`}`));
-      C.PLAYERS.forEach(p => tr.appendChild(el("td", done && t[p].ok === best && best > 0 ? "best" : "", t[p].picked ? `${t[p].ok}–${t[p].bad}${occ && done && t[p].ok === best && best > 0 ? " " + occ.icon : ""}` : "—")));
+      C.PLAYERS.forEach(p => tr.appendChild(el("td", done && t[p].ok === best && best > 0 ? "best" : "", t[p].picked ? `${t[p].ok}–${t[p].bad}${occ?.prize && done && t[p].ok === best && best > 0 ? " " + occ.icon : ""}` : "—")));
       body.appendChild(tr);
     });
     tb.appendChild(body);
     v.appendChild(tb);
-    v.appendChild(el("p", "note", "Correct picks count 1 point each. A game left unpicked counts as a loss. Season rank: most wins, then fewest losses, then most weeks won — equal on all three is a tie. Ties for a week's best count as a week won for everyone tied." + (S.calendar.some(w => w.special) ? " Named weeks hand a trophy to that week's winner." : "")));
+    v.appendChild(el("p", "note", "Correct picks count 1 point each. A game left unpicked counts as a loss. Season rank: most wins, then fewest losses, then most weeks won — equal on all three is a tie. Ties for a week's best count as a week won for everyone tied." + (S.calendar.some(w => w.special) ? " Named weeks hand a trophy to that week's winner." : "") + (S.calendar.some(w => w.post) ? " Trophy games go to whoever picked the winner with the closest total points; trophies are bragging rights and don't change the standings." : "")));
   }
 
   function renderWelcome(v) {
@@ -954,8 +1169,10 @@
 
   function render() {
     S.rtok++;
+    const tbFocus = document.activeElement?.dataset?.tb;
     renderHeader();
     const v = $("#view"); v.innerHTML = "";
+    if (tbFocus) requestAnimationFrame(() => { const i = v.querySelector(`input[data-tb="${tbFocus}"]`); if (i) i.focus(); });
     if (!S.player && (S.tab === "picks" || !SECURE)) { renderWelcome(v); return; }
     if (S.tab === "picks") renderPicks(v);
     else if (S.tab === "sheet") renderSheet(v);
@@ -976,8 +1193,22 @@
       if (S.sport === sp) $("#view").innerHTML = `<div class="empty"><b>Couldn't load</b>${esc(e.message)}. Pull to refresh or try again in a minute.</div>`;
     }
   }
-  $("#prev").onclick = () => showWeek(S.week - 1);
-  $("#next").onclick = () => showWeek(S.week + 1);
+  const stepWeek = d => { const i = S.calendar.findIndex(x => x.n === S.week), w = S.calendar[i + d]; if (w) showWeek(w.n); };
+  $("#prev").onclick = () => stepWeek(-1);
+  $("#next").onclick = () => stepWeek(1);
+
+  // Manual refresh, for the Home Screen app where there's no browser reload button.
+  $("#refresh").onclick = async () => {
+    if (S.week == null) return;
+    const b = $("#refresh"), sp = S.sport;
+    b.disabled = true; b.textContent = "Refreshing…";
+    try {
+      const cur = currentWeek(sp);
+      if (cur !== S.week) { await loadWeek(cur, true, sp); await loadPicks(cur, sp); }   // standings count the current week too
+      await showWeek(S.week, true);
+      primedAt = 0; primeOther();
+    } finally { b.disabled = false; b.textContent = "Refresh"; }
+  };
 
   // Open whichever sport is showing: first visit loads its schedule and jumps to the current week.
   async function openSport() {
@@ -1011,7 +1242,7 @@
         const name = C.TOKEN_HASHES[await sha256(token.trim())];
         if (name && C.PLAYERS.includes(name)) {
           localStorage.setItem("pickem.token", token.trim());
-          if (urlKey) history.replaceState(null, "", location.pathname);
+          if (urlKey && !installing()) history.replaceState(null, "", location.pathname);
           return name;
         }
         if (urlKey) toast("That link isn't valid", true);
@@ -1020,7 +1251,7 @@
     }
     const q = new URLSearchParams(location.search).get("player") || decodeURIComponent(location.hash.slice(1));
     const fromUrl = C.PLAYERS.find(p => p.toLowerCase() === (q || "").toLowerCase());
-    if (fromUrl) { localStorage.setItem("pickem.player", fromUrl); history.replaceState(null, "", location.pathname); return fromUrl; }
+    if (fromUrl) { localStorage.setItem("pickem.player", fromUrl); if (!installing()) history.replaceState(null, "", location.pathname); return fromUrl; }
     const saved = localStorage.getItem("pickem.player");
     return C.PLAYERS.includes(saved) ? saved : null;
   }
@@ -1055,6 +1286,8 @@
     supported: "serviceWorker" in navigator && "PushManager" in window && "Notification" in window };
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   const isStandalone = () => navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+  // "Installing" = an iPhone or iPad in Safari that arrived via the bell's set-up link (…&install=1).
+  const installing = () => isIOS && !isStandalone() && new URLSearchParams(location.search).get("install") === "1";
   const prefs = () => { try { return { on: false, cfb: true, cbb: true, at: 0, ...(JSON.parse(localStorage.getItem("pickem.remind") || "null") || {}) }; } catch { return { on: false, cfb: true, cbb: true, at: 0 }; } };
   const savePrefs = p => { try { localStorage.setItem("pickem.remind", JSON.stringify(p)); } catch {} };
   const ub64 = t => Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - t.length % 4) % 4)), ch => ch.charCodeAt(0));
@@ -1073,7 +1306,14 @@
     const b = el("button", "bell" + (on ? " on" : ""), `<svg viewBox="0 0 24 24" fill="${on ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" fill="none"/></svg>`);
     b.id = "bell"; b.type = "button";
     b.setAttribute("aria-label", on ? "Reminders are on" : "Set up reminders");
-    b.onclick = () => { N.open = !N.open; N.msg = ""; renderRemind(); };
+    b.onclick = () => {
+      if (!N.open && isIOS && !isStandalone() && !installing()) {
+        let t = ""; try { t = localStorage.getItem("pickem.token") || ""; } catch {}
+        const who = SECURE ? (t ? "key=" + encodeURIComponent(t) : "") : "player=" + encodeURIComponent(S.player);
+        if (who) { location.replace(location.pathname + "?" + who + "&install=1"); return; }
+      }
+      N.open = !N.open; N.msg = ""; renderRemind();
+    };
     return b;
   }
 
@@ -1127,15 +1367,16 @@
   function renderRemind() {
     const box = $("#remind");
     const iosTab = isIOS && !isStandalone();
-    // On an iPhone the Home Screen version has to be added from a link that says whose phone it is.
-    if (SECURE && S.player) { let t = ""; try { t = localStorage.getItem("pickem.token") || ""; } catch {} if (t) history.replaceState(null, "", location.pathname + (N.open && iosTab ? "?key=" + encodeURIComponent(t) : "")); }
+    // Setting up on an iPhone keeps the personal link in the address while this panel is open (see the bell).
+    // Closing the panel tucks it away again.
+    if (!N.open && /[?&](key|player|install)=/.test(location.search)) history.replaceState(null, "", location.pathname);
     box.hidden = !N.open || !S.player;
     if (box.hidden) return;
     const p = prefs(), dis = N.busy ? " disabled" : "";
     let body;
     if (iosTab) body = `<p>On an iPhone or iPad, reminders only work from the Home Screen version of The Sheet. One-time setup:</p>
       <ol><li>Tap the <b>Share</b> button (the square with an arrow).</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open The Sheet from the new icon and tap the bell again.</li></ol>
-      <p>Do this with this panel open so the new icon knows it's ${esc(S.player)}'s. If you already had a Home Screen icon for The Sheet, you can delete the old one afterward.</p>`;
+      <p>Leave <b>Open as Web App</b> switched on, and do this with this panel showing so the new icon knows it's ${esc(S.player)}'s. If the new icon opens as "Viewer", paste your private link into the box it shows. An older Home Screen icon for The Sheet can be deleted afterward.</p>`;
     else if (!N.supported) body = `<p>This browser can't show notifications. Try The Sheet in Safari or Chrome.</p>`;
     else if (p.on && N.sub && Notification.permission === "granted") body = `<p>${esc(S.player)}, this device gets a morning summary when you have games to pick, and a last call about an hour before they start. Only your own games.</p>
       <label>🏈 Football reminders<input type="checkbox" data-sp="cfb"${p.cfb ? " checked" : ""}${dis}></label>
@@ -1170,7 +1411,10 @@
     if (HOOPS_ON && SPORTS[wantSport]) { S.sport = wantSport; try { localStorage.setItem("pickem.sport", wantSport); } catch {} }
     if (wantOpen && S.player) { DATA[S.sport].conf = "__open"; S.tab = "picks"; }
     if (wantSport || wantOpen) history.replaceState(null, "", location.pathname);
+    if (installing() && S.player && NOTIFY_ON) N.open = true;                 // came back from the bell's set-up reload: show the steps
+    else if (qp.get("install") && !installing()) history.replaceState(null, "", location.pathname);
     renderHeader();
+    if (N.open) renderRemind();
     await openSport();
     refreshReminders();
     setTimeout(primeOther, 1500);
