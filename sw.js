@@ -1,4 +1,4 @@
-// The Sheet: service worker. Its only job is reminders. It does not cache or change the site.
+// Pettiet Pick'em: service worker. Its only job is reminders. It does not cache or change the site.
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
 
@@ -6,12 +6,12 @@ self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
 self.addEventListener("push", e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data ? e.data.text() : "" }; }
-  e.waitUntil(self.registration.showNotification(d.title || "The Sheet", {
+  e.waitUntil(self.registration.showNotification(d.title || "Pettiet Pick'em", {
     body: d.body || "", tag: d.tag || "pickem", data: { url: d.url || "./" }, icon: "icon-192.png", badge: "icon-192.png",
   }));
 });
 
-// Tapped: open The Sheet on that sport's unpicked games (reusing the app if it's already open).
+// Tapped: open Pettiet Pick'em on that sport's unpicked games (reusing the app if it's already open).
 self.addEventListener("notificationclick", e => {
   e.notification.close();
   const url = new URL((e.notification.data && e.notification.data.url) || "./", self.registration.scope).href;

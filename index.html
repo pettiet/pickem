@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#12211A">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
-<meta name="apple-mobile-web-app-title" content="The Sheet">
-<title>The Sheet · College Football Pick'em</title>
+<meta name="apple-mobile-web-app-title" content="Pettiet Pick'em">
+<title>Pettiet Pick'em</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -248,7 +248,7 @@
   <header>
     <div class="brand">
       <div class="eyebrow" id="eyebrow">College Football Pick'em</div>
-      <h1 id="title">The <span>Sheet</span></h1>
+      <h1 id="title">Pettiet <span>Pick'em</span></h1>
     </div>
     <div class="who" id="who"></div>
   </header>
@@ -283,6 +283,8 @@
 <script>
 (() => {
   const C = window.PICKEM_CONFIG;
+  // The app's name. (config.js still has TITLE: "The Sheet"; this takes over so config.js never needs editing.)
+  const APP_NAME = "Pettiet Pick'em";
   const ESPN_BASE = `https://site.api.espn.com/apis/site/v2/sports`;
   const ESPN = `${ESPN_BASE}/football/college-football/scoreboard`;
   const configured = C.SUPABASE_URL && !C.SUPABASE_URL.includes("YOUR-");
@@ -835,7 +837,7 @@
 
   // ── render ───────────────────────────────────────────────────────────────
   function renderHeader() {
-    $("#title").innerHTML = esc(C.TITLE).replace(/(\S+)$/, "<span>$1</span>");
+    $("#title").innerHTML = esc(APP_NAME).replace(/(\S+)$/, "<span>$1</span>");
     $("#eyebrow").textContent = SP().eyebrow;
     document.body.dataset.sport = S.sport;
     $("#sports").hidden = !HOOPS_ON;
@@ -1347,7 +1349,7 @@
 
   const turnOn = () => working(async () => {
     const perm = await Notification.requestPermission();        // has to be the first thing after the tap
-    if (perm !== "granted") throw fail(perm === "denied" ? "Notifications are blocked for The Sheet on this device. Allow them in your device's notification settings, then try again." : "No problem. Tap again whenever you want them.");
+    if (perm !== "granted") throw fail(perm === "denied" ? "Notifications are blocked for Pettiet Pick'em on this device. Allow them in your device's notification settings, then try again." : "No problem. Tap again whenever you want them.");
     N.sub = await subscribeDevice();
     const p = { ...prefs(), on: true, at: Date.now() };
     await registerDevice(N.sub, p); savePrefs(p);
@@ -1377,10 +1379,10 @@
     if (box.hidden) return;
     const p = prefs(), dis = N.busy ? " disabled" : "";
     let body;
-    if (iosTab) body = `<p>On an iPhone or iPad, reminders only work from the Home Screen version of The Sheet. One-time setup:</p>
-      <ol><li>Tap the <b>Share</b> button (the square with an arrow).</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open The Sheet from the new icon and tap the bell again.</li></ol>
-      <p>Leave <b>Open as Web App</b> switched on, and do this with this panel showing so the new icon knows it's ${esc(S.player)}'s. If the new icon opens as "Viewer", paste your private link into the box it shows. An older Home Screen icon for The Sheet can be deleted afterward.</p>`;
-    else if (!N.supported) body = `<p>This browser can't show notifications. Try The Sheet in Safari or Chrome.</p>`;
+    if (iosTab) body = `<p>On an iPhone or iPad, reminders only work from the Home Screen version of Pettiet Pick'em. One-time setup:</p>
+      <ol><li>Tap the <b>Share</b> button (the square with an arrow).</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open Pettiet Pick'em from the new icon and tap the bell again.</li></ol>
+      <p>Leave <b>Open as Web App</b> switched on, and do this with this panel showing so the new icon knows it's ${esc(S.player)}'s. If the new icon opens as "Viewer", paste your private link into the box it shows. An older Home Screen icon for Pettiet Pick'em can be deleted afterward.</p>`;
+    else if (!N.supported) body = `<p>This browser can't show notifications. Try Pettiet Pick'em in Safari or Chrome.</p>`;
     else if (p.on && N.sub && Notification.permission === "granted") body = `<p>${esc(S.player)}, this device gets a morning summary when you have games to pick, and a last call about an hour before they start. Only your own games.</p>
       <label>🏈 Football reminders<input type="checkbox" data-sp="cfb"${p.cfb ? " checked" : ""}${dis}></label>
       ${HOOPS_ON ? `<label>🏀 Basketball reminders<input type="checkbox" data-sp="cbb"${p.cbb ? " checked" : ""}${dis}></label>` : ""}
