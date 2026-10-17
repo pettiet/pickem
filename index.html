@@ -363,7 +363,7 @@
     halloween: { name: "Halloween Week",     icon: "🎃", prize: "the pumpkin", blurb: "Spooky Saturday.",                 accent: "#F07A1A", bar: "linear-gradient(135deg,#1A1A1A,#4A2A0A)" },
     rivalry:   { name: "Rivalry Week",       icon: "🪓", prize: "the axe",     blurb: "Thanksgiving rivalry weekend.",     accent: "#E0573F", bar: "linear-gradient(135deg,#2A1210,#5A1F17)" },
     champs:    { name: "Championship Week",  icon: "💍", prize: "the ring",    blurb: "Conference title games.",           accent: "#E0B03A", bar: "linear-gradient(135deg,#101B36,#243B6B)" },
-    armynavy:  { name: "Army-Navy Week",     icon: "🎖️", prize: "the medal",   blurb: "America's Game.",                   accent: "#C8A951", bar: "linear-gradient(135deg,#0B1F3A,#3A3A3A)" },
+    armynavy:  { name: "Army-Navy Week",     icon: "🎖️", prize: null,          blurb: "America's Game, and the only game this week. Pick it and guess total points: the closest takes the medal.", accent: "#C8A951", bar: "linear-gradient(135deg,#0B1F3A,#3A3A3A)" },
     bowl:      { name: "Bowl Week",          icon: "🥣", prize: "the bowl",    blurb: "Bowl season.",                      accent: "#E08A2B", bar: "linear-gradient(135deg,#123B2A,#7A4A14)" },
     cfp:       { name: "College Football Playoff", icon: "🏆", prize: null, blurb: "Every playoff game has its own trophy. Tiebreaker: closest total points.", accent: "#F2B705", bar: "linear-gradient(135deg,#111111,#3A3320)" },
     title:     { name: "National Championship", icon: "👑", prize: null, blurb: "One game for the crown. Tiebreaker: closest total points.", accent: "#F2B705", bar: "linear-gradient(135deg,#2A2208,#5C4A12)" },
@@ -376,7 +376,7 @@
     [/cotton bowl/i, "🤠", "Cotton Bowl"], [/fiesta bowl/i, "🪅", "Fiesta Bowl"], [/peach bowl/i, "🍑", "Peach Bowl"],
     [/pop-?tarts/i, TOASTER, "Pop-Tarts Bowl"], [/mayo/i, "🪣", "Duke's Mayo Bowl"], [/cheez-?it|citrus bowl/i, "🧀", "Citrus Bowl"],
     [/potato bowl/i, "🥔", "Potato Bowl"], [/gator bowl/i, "🐊", "Gator Bowl"], [/\bsun bowl/i, "🌞", "Sun Bowl"],
-    [/hawai/i, "🌺", "Hawaiʻi Bowl"], [/pinstripe/i, "🗽", "Pinstripe Bowl"],
+    [/hawai/i, "🌺", "Hawaiʻi Bowl"], [/pinstripe/i, "🗽", "Pinstripe Bowl"], [/snoop|arizona bowl/i, "🚬", "Arizona Bowl"],
   ];
   const CFP_ROUNDS = [[/first round/i, 21, "CFP First Round"], [/quarterfinal/i, 22, "CFP Quarterfinals"], [/semifinal/i, 23, "CFP Semifinals"], [/national championship/i, 24, "National Championship"]];
   const tagIcon = g => g.trophy ? g.trophy.icon : g.post ? (g.cfp ? "🏈" : "🥣") : eventIcon(g);
@@ -613,6 +613,9 @@
     if (n === 0) evs = evs.filter(g => g.date < WEEK0_END);
     else if (n === 1 && D.calendar[0]?.n === 0) evs = evs.filter(g => g.date >= WEEK0_END);
     D.games[n] = evs.sort((a, b) => a.date - b.date);
+    // Army-Navy week is a single game, so it's a trophy game with the total-points tiebreaker.
+    if (D.calendar.find(w => w.n === n)?.special === FB_OCC.armynavy)
+      D.games[n].forEach(g => { if (D.games[n].length === 1 || [g.home.abbr, g.away.abbr].some(a => /^(ARMY|NAVY)$/i.test(a))) g.trophy = { icon: "🎖️", name: "Army-Navy" }; });
     D.fetchedAt[n] = Date.now();
     return D.games[n];
   }
@@ -750,7 +753,7 @@
     rows.forEach(x => m[key(x.game_id, x.player)] = x.pick);
     D.picks[week] = m;
     if (sp === "cbb") { D.noTable = false; hoopsFilter(week); }
-    if (sp === "cfb" && week >= 16) {   // postseason: tiebreaker totals too
+    if (sp === "cfb" && (week >= 16 || D.calendar.find(w => w.n === week)?.special === FB_OCC.armynavy)) {   // trophy-game weeks: tiebreaker totals too
       const t = await sb(`tiebreakers?season=eq.${T.season}&week=eq.${week}&select=game_id,player,total`);
       if (t.status === 404) { D.noTb = true; D.tb[week] = {}; return; }
       if (!t.ok) throw new Error("Supabase " + t.status);
