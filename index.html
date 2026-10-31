@@ -34,6 +34,9 @@
   button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
   button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--flag);outline-offset:2px}
   .app{max-width:760px;margin:0 auto;padding:0 14px calc(28px + env(safe-area-inset-bottom))}
+  /* Home Screen app: keep the phone's clock and battery on a solid strip instead of over the scrolling page */
+  .app{padding-top:env(safe-area-inset-top)}
+  body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--field);z-index:50;pointer-events:none}
 
   /* ── header ─────────────────────────────── */
   header{padding:18px 0 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
@@ -214,6 +217,7 @@
   .pl.lead .crown{color:var(--flag)}
   .wk td.best{font-weight:700;color:var(--win)}
   .wk td.w{text-align:left;font-weight:600}
+  .wk td:not(.w),.wk th:not(:first-child){white-space:nowrap;font-variant-numeric:tabular-nums}   /* keep 33–23 on one line */
 
   /* ── welcome ────────────────────────────── */
   .welcome{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px 18px;text-align:center;margin-top:8px}
