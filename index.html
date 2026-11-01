@@ -170,7 +170,10 @@
   .team.picked .nm::after{content:"✓";margin-left:6px;font-size:14px;vertical-align:middle}
   .team.home.picked .nm::after{content:"";margin:0}
   .team.home.picked .nm::before{content:"✓";margin-right:6px;font-size:14px;vertical-align:middle}
-  .team.dim{opacity:.55}
+  .team.dim img,.team.dim .nologo,.team.dim .rk,.team.dim .nm,.team.dim .rec,.team.dim .sc{opacity:.55}   /* the losing side fades; pick tags stay bright */
+  .others{display:flex;gap:3px;margin-top:3px}
+  .team.home .others{justify-content:flex-end}
+  .others span{min-width:30px;height:18px;padding:0 5px;border-radius:999px;display:inline-grid;place-items:center;font:800 9.5px/1 var(--body);letter-spacing:.04em;color:#fff;box-shadow:0 0 0 1.5px #fff}
   .team:disabled{cursor:default}
   .team:not(:disabled):hover{background:#F4F6F3}
   .team.picked:not(:disabled):hover{filter:brightness(1.08);background:var(--tc)}
@@ -880,6 +883,15 @@
       : DATA[S.sport].noTable ? `<div class="banner"><b>Basketball isn't switched on yet.</b> You can browse the schedule, but picks can't be saved until the one-time Supabase setup is run (<code>supabase-basketball.sql</code>). Football is unaffected.</div>` : "";
   }
 
+  // Who's who on the game cards (other people's picks, shown once a game kicks off).
+  const PEOPLE = { Nick: { tag: "NTP", color: "#2F6FDE" }, Ashley: { tag: "AKP", color: "#D6338A" }, Andrew: { tag: "ASP", color: "#E8730C" } };
+  const personTag = p => PEOPLE[p] || { tag: p.slice(0, 3).toUpperCase(), color: "#74847B" };
+  function othersOn(g, teamId) {
+    if (!locked(g) || isVoid(g)) return "";
+    const who = C.PLAYERS.filter(p => p !== S.player && S.picks[S.week]?.[key(g.id, p)] === teamId);
+    return who.length ? `<div class="others">${who.map(p => { const t = personTag(p); return `<span style="background:${t.color}" title="${esc(p)}">${esc(t.tag)}</span>`; }).join("")}</div>` : "";
+  }
+
   function teamButton(g, side, mine) {
     const t = g[side];
     const picked = mine === t.id;
@@ -889,7 +901,7 @@
     b.disabled = locked(g);
     b.setAttribute("aria-pressed", picked);
     b.innerHTML = `${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : `<span class="nologo">${esc((t.abbr || "?").slice(0, 4))}</span>`}
-      <div class="n">${t.rank ? `<div class="rk">${/^NCAA Tournament/.test(g.event || "") ? `${t.rank} SEED` : `#${t.rank}`}</div>` : ""}<div class="nm" title="${esc(t.full)}">${esc(t.name)}</div><div class="rec">${esc(t.record)}</div></div>
+      <div class="n">${t.rank ? `<div class="rk">${/^NCAA Tournament/.test(g.event || "") ? `${t.rank} SEED` : `#${t.rank}`}</div>` : ""}<div class="nm" title="${esc(t.full)}">${esc(t.name)}</div><div class="rec">${esc(t.record)}</div>${othersOn(g, t.id)}</div>
       ${g.state !== "pre" ? `<div class="sc">${t.score}</div>` : ""}`;
     b.onclick = () => savePick(S.week, g.id, t.id);
     return b;
