@@ -92,13 +92,18 @@
   .race .rt{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
   .race .rt b{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase}
   .race .rt span{font-size:12px;color:var(--mute)}
-  .race .rr{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid #EEF1EC}
+  .race .rr{display:grid;grid-template-columns:1fr 48px 34px 104px;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #EEF1EC}
+  .race .rr.hd{border-top:0;padding:0 0 2px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+  .race .rr .bt{text-align:center;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .race .rr .rc{text-align:right}
   .race .rr .nm{font-weight:700}
   .race .rr .rc{font-family:var(--display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}
   .race .chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;text-align:center}
   .chip.won{background:var(--flag);color:var(--ink)}
   .chip.share{background:#FFF1C2;color:#6B5200}
   .chip.alive{background:#DDF3E5;color:var(--win)}
+  .chip.lead{background:var(--ink);color:#fff}
+  .chip.tie{background:#E7EEF9;color:#2F5FA8}
   .chip.out{background:#EDF0EC;color:var(--lock)}
   .race p{margin:6px 0 0;font-size:11px;color:var(--mute)}
   .occ{display:flex;align-items:center;gap:12px;background:var(--card);border-left:5px solid var(--flag);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 14px;margin:0 0 10px}
@@ -1150,20 +1155,24 @@
     const started = rem.filter(g => locked(g)), later = rem.length - started.length;
     // the most p could gain on q in the games still to be decided
     const gain = (p, q) => started.filter(g => { const a = picks[key(g.id, p)]; return a && a !== picks[key(g.id, q)]; }).length + later;
+    const top = Math.max(...C.PLAYERS.map(W));
     const rows = C.PLAYERS.map(p => {
       const others = C.PLAYERS.filter(q => q !== p);
-      const max = W(p) + started.filter(g => picks[key(g.id, p)]).length + later;
+      const best = W(p) + started.filter(g => picks[key(g.id, p)]).length + later;   // most wins p can finish with
       let st;
-      if (others.every(q => W(p) - W(q) > gain(q, p))) st = ["won", "Clinched 🏆"];
-      else if (others.every(q => W(p) - W(q) >= gain(q, p))) st = ["share", "At least a tie"];
-      else if (others.some(q => W(q) - W(p) > gain(p, q))) st = ["out", "Can't win"];
-      else st = ["alive", `Alive · up to ${max}`];
-      return { p, w: W(p), l: t[p].bad, st };
-    }).sort((a, b) => b.w - a.w || a.l - b.l || ["won", "share", "alive", "out"].indexOf(a.st[0]) - ["won", "share", "alive", "out"].indexOf(b.st[0]));
+      if (others.every(q => W(p) - W(q) > gain(q, p))) st = ["won", "Clinched 🏆"];                 // nobody can catch them
+      else if (others.every(q => W(p) - W(q) >= gain(q, p))) st = ["share", "Clinched a tie"];      // nobody can pass them
+      else if (others.some(q => W(q) - W(p) > gain(p, q))) st = ["out", "Out"];                     // can't even tie
+      else if (W(p) === top) st = ["lead", "Leading"];
+      else if (others.every(q => W(p) + gain(p, q) > W(q))) st = ["alive", "Can still win"];        // best case finishes ahead of everyone
+      else st = ["tie", "Can only tie"];
+      return { p, w: W(p), l: t[p].bad, best, st };
+    }).sort((a, b) => b.w - a.w || a.l - b.l || ["won", "share", "lead", "alive", "tie", "out"].indexOf(a.st[0]) - ["won", "share", "lead", "alive", "tie", "out"].indexOf(b.st[0]));
     const w = D.calendar.find(x => x.n === n), name = w?.special ? `${w.special.icon} ${w.special.name}` : (w?.label || `Week ${n}`);
     const box = el("div", "race", `<div class="rt"><b>This week's race</b><span>${esc(name)}</span></div>` +
-      rows.map(r => `<div class="rr"><span class="nm">${esc(r.p)}</span><span class="rc">${r.w}–${r.l}</span><span class="chip ${r.st[0]}">${r.st[1]}</span></div>`).join("") +
-      `<p>${rem.length} game${rem.length > 1 ? "s" : ""} left: ${started.length} live, ${later} not started yet. Games that haven't started count as anyone's, since picks stay hidden until ${SPORTS[sp].lock}.</p>`);
+      `<div class="rr hd"><span></span><span style="text-align:right">Record</span><span style="text-align:center">Best</span><span></span></div>` +
+      rows.map(r => `<div class="rr"><span class="nm">${esc(r.p)}</span><span class="rc">${r.w}–${r.l}</span><span class="bt">${r.st[0] === "out" ? "—" : r.best}</span><span class="chip ${r.st[0]}">${r.st[1]}</span></div>`).join("") +
+      `<p>${rem.length} game${rem.length > 1 ? "s" : ""} left: ${started.length} live, ${later} not started yet. Best is the most wins each person can still finish with. Games that haven't started count as anyone's, since picks stay hidden until ${SPORTS[sp].lock}.</p>`);
     return box;
   }
 
