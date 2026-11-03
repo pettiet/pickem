@@ -87,6 +87,20 @@
   .team .nologo{width:36px;height:36px;flex:none;border-radius:50%;background:#E2E7E1;color:var(--ink-2);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.02em}
 
   /* ── basketball occasions (Feast Week and friends) ── */
+  .day.sec.split h2{color:#B3262E}
+  .race{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px 10px;margin:0 0 12px}
+  .race .rt{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .race .rt b{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase}
+  .race .rt span{font-size:12px;color:var(--mute)}
+  .race .rr{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid #EEF1EC}
+  .race .rr .nm{font-weight:700}
+  .race .rr .rc{font-family:var(--display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}
+  .race .chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;text-align:center}
+  .chip.won{background:var(--flag);color:var(--ink)}
+  .chip.share{background:#FFF1C2;color:#6B5200}
+  .chip.alive{background:#DDF3E5;color:var(--win)}
+  .chip.out{background:#EDF0EC;color:var(--lock)}
+  .race p{margin:6px 0 0;font-size:11px;color:var(--mute)}
   .occ{display:flex;align-items:center;gap:12px;background:var(--card);border-left:5px solid var(--flag);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 14px;margin:0 0 10px}
   .occ i{font-style:normal;font-size:28px;line-height:1}
   .occ b{display:block;font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase;line-height:1.1}
@@ -891,6 +905,9 @@
   // Who's who on the game cards (other people's picks, shown once a game kicks off).
   const PEOPLE = { Nick: { tag: "NTP", color: "#2F6FDE" }, Ashley: { tag: "AKP", color: "#D6338A" }, Andrew: { tag: "ASP", color: "#E8730C" } };
   const personTag = p => PEOPLE[p] || { tag: p.slice(0, 3).toUpperCase(), color: "#74847B" };
+  // A game where you don't all agree (an unpicked game counts as its own "pick", since it's an automatic miss).
+  // Only ever judged after kickoff, when picks are public anyway.
+  const isSplit = (g, week = S.week, sp = S.sport) => locked(g) && !isVoid(g) && new Set(C.PLAYERS.map(p => DATA[sp].picks[week]?.[key(g.id, p)] || "none")).size > 1;
   function othersOn(g, teamId) {
     if (!locked(g) || isVoid(g)) return "";
     const who = C.PLAYERS.filter(p => p !== S.player && S.picks[S.week]?.[key(g.id, p)] === teamId);
@@ -934,6 +951,7 @@
     const matches = g => {
       if (S.conf.startsWith("evt:")) { if (evBase(g) !== S.conf.slice(4)) return false; }
       else if (S.conf === "__ranked") { if (!g.home.rank && !g.away.rank) return false; }
+      else if (S.conf === "__split") { if (!isSplit(g)) return false; }
       else if (S.conf === "__open") { if ((locked(g) || S.picks[S.week]?.[key(g.id, S.player)]) && !S.keep.has(g.id)) return false; }
       else if (S.conf === "__other") { if (CONF_NAMES[g.home.conf] && CONF_NAMES[g.away.conf]) return false; }
       else if (S.conf && g.home.conf !== S.conf && g.away.conf !== S.conf) return false;
@@ -968,7 +986,9 @@
     const opt = id => `<option value="${esc(id)}"${id === S.conf ? " selected" : ""}>${esc(CONF_NAMES[id])}</option>`;
     const other = hasOther ? `<option value="__other"${S.conf === "__other" ? " selected" : ""}>Other</option>` : "";
     const owe = games.filter(g => !isVoid(g) && !locked(g) && !S.picks[S.week]?.[key(g.id, S.player)]).length;
-    const unpicked = `<option value="__open"${S.conf === "__open" ? " selected" : ""}>Unpicked${owe ? ` (${owe})` : ""}</option>`;
+    const nSplit = games.filter(g => isSplit(g)).length;
+    const unpicked = `<option value="__open"${S.conf === "__open" ? " selected" : ""}>Unpicked${owe ? ` (${owe})` : ""}</option>` +
+      (nSplit || S.conf === "__split" ? `<option value="__split"${S.conf === "__split" ? " selected" : ""}>Split picks (${nSplit})</option>` : "");
     sel.innerHTML = !POWER
       ? `<option value="">All conferences</option>` + unpicked + ids.map(opt).join("") + other
       : `<option value="">All games</option>` + unpicked + `<option value="__ranked"${S.conf === "__ranked" ? " selected" : ""}>Top 25 games</option>` +
@@ -1068,12 +1088,18 @@
     const pinned = shown.filter(g => S.favs[g.id]);
     const rest = shown.filter(g => !S.favs[g.id]);
     const over = g => g.completed || isVoid(g);
-    const active = rest.filter(g => !over(g));
+    const live = rest.filter(g => !over(g));
+    const swing = S.conf === "__split" ? [] : live.filter(g => isSplit(g));   // in progress, and you don't all agree
+    const active = live.filter(g => !swing.includes(g));
     const done = rest.filter(over);
 
     if (pinned.length) {
       v.appendChild(el("div", "day sec", `<h2>★ Pinned</h2><span>${pinned.length} game${pinned.length > 1 ? "s" : ""}</span>`));
       byDay(pinned, true);
+    }
+    if (swing.length) {
+      v.appendChild(el("div", "day sec split", `<h2>⚡ Split picks</h2><span>${swing.length} live game${swing.length > 1 ? "s" : ""} where you don't all agree</span>`));
+      byDay(swing, true);
     }
     byDay(active, false);
     if (done.length) {
@@ -1114,6 +1140,33 @@
     if (C.HIDE_PICKS_UNTIL_KICKOFF) v.appendChild(el("p", "note", `Other people's picks stay hidden until ${SP().lock}.`));
   }
 
+  // "This week's race": who has locked up the week, who can still win it, who can't.
+  // Games that haven't started count as anyone's to win, because picks stay hidden until kickoff.
+  function weekRace(n, sp) {
+    const D = DATA[sp], games = D.games[n] || [], picks = D.picks[n] || {};
+    const rem = games.filter(g => !g.completed && !isVoid(g));
+    if (!games.length || !rem.length || !games.some(g => locked(g))) return null;   // not started, or already over
+    const t = tally(n), W = p => t[p].ok;
+    const started = rem.filter(g => locked(g)), later = rem.length - started.length;
+    // the most p could gain on q in the games still to be decided
+    const gain = (p, q) => started.filter(g => { const a = picks[key(g.id, p)]; return a && a !== picks[key(g.id, q)]; }).length + later;
+    const rows = C.PLAYERS.map(p => {
+      const others = C.PLAYERS.filter(q => q !== p);
+      const max = W(p) + started.filter(g => picks[key(g.id, p)]).length + later;
+      let st;
+      if (others.every(q => W(p) - W(q) > gain(q, p))) st = ["won", "Clinched 🏆"];
+      else if (others.every(q => W(p) - W(q) >= gain(q, p))) st = ["share", "At least a tie"];
+      else if (others.some(q => W(q) - W(p) > gain(p, q))) st = ["out", "Can't win"];
+      else st = ["alive", `Alive · up to ${max}`];
+      return { p, w: W(p), l: t[p].bad, st };
+    }).sort((a, b) => b.w - a.w || a.l - b.l || ["won", "share", "alive", "out"].indexOf(a.st[0]) - ["won", "share", "alive", "out"].indexOf(b.st[0]));
+    const w = D.calendar.find(x => x.n === n), name = w?.special ? `${w.special.icon} ${w.special.name}` : (w?.label || `Week ${n}`);
+    const box = el("div", "race", `<div class="rt"><b>This week's race</b><span>${esc(name)}</span></div>` +
+      rows.map(r => `<div class="rr"><span class="nm">${esc(r.p)}</span><span class="rc">${r.w}–${r.l}</span><span class="chip ${r.st[0]}">${r.st[1]}</span></div>`).join("") +
+      `<p>${rem.length} game${rem.length > 1 ? "s" : ""} left: ${started.length} live, ${later} not started yet. Games that haven't started count as anyone's, since picks stay hidden until ${SPORTS[sp].lock}.</p>`);
+    return box;
+  }
+
   async function renderStandings(v) {
     v.appendChild(el("div", "empty", "Adding up the season…"));
     const sp = S.sport, tok = S.rtok;
@@ -1152,6 +1205,8 @@
       pod.appendChild(el("div", "pl" + (lead ? " lead" : ""),
         `${label ? `<div class="crown">${label}</div>` : ""}<div class="name">${esc(p)}</div><div class="rec">${s.ok}–${s.bad}</div><div class="sub">${pct}% · ${s.weeksWon} week${s.weeksWon === 1 ? "" : "s"} won${!lead && back ? ` · ${back} back` : ""}</div>${s.trophies.length ? `<div class="case" aria-label="Trophies won">${s.trophies.join(" ")}</div>` : ""}`));
     });
+    const race = weekRace(cur, sp);
+    if (race) v.appendChild(race);
     v.appendChild(pod);
     const tb = el("table", "wk");
     tb.innerHTML = `<thead><tr><th>Week</th>${C.PLAYERS.map(p => `<th>${esc(p)}</th>`).join("")}</tr></thead>`;
