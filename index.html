@@ -279,6 +279,27 @@
   .where button{flex:none;width:40px;height:40px;border-radius:50%;font-size:22px;line-height:1;color:#fff;background:rgba(255,255,255,.12)}
   body.spin .where button{animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
+  /* ── crunch time, upset watch, score flash ── */
+  .game.crunch{box-shadow:0 0 0 2px #E0393E,var(--shadow);animation:crunch 1.6s ease-in-out infinite}
+  @keyframes crunch{50%{box-shadow:0 0 0 2px rgba(224,57,62,.35),0 0 14px rgba(224,57,62,.35)}}
+  .upset{display:flex;align-items:baseline;gap:8px;padding:6px 12px;background:#FFF4D6;border-bottom:1px solid #F3E2AE;font-size:12px;color:#6B5310;white-space:nowrap;overflow:hidden}
+  .upset b{font-weight:800;color:#8A5A00}
+  .upset span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .team .sc.flash{animation:flash 1.8s ease-out}
+  @keyframes flash{0%,25%{background:#FFD43B;color:#12211A;transform:scale(1.18)}100%{background:transparent;transform:none}}
+  .team .sc{border-radius:8px;padding:0 4px}
+  /* ── recap ── */
+  .recap{position:relative;background:linear-gradient(135deg,#FFF6D8,#FCE7A8);border:1px solid #F0D27A;border-radius:var(--radius);padding:12px 44px 12px 14px;margin-bottom:12px;box-shadow:var(--shadow)}
+  .recap .rh{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.05em;text-transform:uppercase;color:#7A5A00}
+  .recap .rw{font-size:15px;margin-top:2px}
+  .recap .ro{font-size:12px;color:var(--ink-2);margin-top:3px}
+  .recap .rx{position:absolute;top:4px;right:4px;width:40px;height:40px;border-radius:50%;font-size:22px;color:#7A5A00}
+  /* ── pull to refresh ── */
+  .ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) - 40px);z-index:45;width:40px;height:40px;border-radius:50%;background:var(--card);color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.2);display:grid;place-items:center;font-size:22px;opacity:0;transform:translate(-50%,0);pointer-events:none;transition:opacity .15s}
+  .ptr.on{opacity:1}
+  .ptr.ready{background:var(--bar,var(--ink));color:#fff}
+  .ptr.go{background:var(--bar,var(--ink));color:#fff;animation:ptrspin .8s linear infinite}
+  @keyframes ptrspin{from{transform:translate(-50%,56px) rotate(0)}to{transform:translate(-50%,56px) rotate(360deg)}}
   /* ── tap a started game ── */
   .game.tap{cursor:pointer}
   .game.tap .team:disabled{pointer-events:none}
@@ -381,6 +402,7 @@
 </div>
 <div class="where" id="where" aria-hidden="true"><div class="wi"><span class="wl" id="wl"></span><span class="ww" id="ww"></span><button type="button" id="wrf" aria-label="Refresh scores">↻</button></div></div>
 <div class="sheetbg" id="sheetbg" hidden><div class="stats" id="stats" role="dialog" aria-modal="true" aria-label="Game stats"></div></div>
+<div class="ptr" id="ptr" aria-hidden="true">↻</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -639,6 +661,7 @@
     return {
       id: ev.id, date, tbd, event, place, region, home, away, winner, sit, last, post: !!post, cfp, round: round ? round[1] : null, trophy,
       state: st.state, completed: !!st.completed, statusName: st.name || "", statusText: st.shortDetail || st.description || "",
+      period: Number(ev.status?.period ?? c.status?.period ?? 0), clock: Number(ev.status?.clock ?? c.status?.clock ?? 0),
       tv: c.broadcasts?.[0]?.names?.join("/") || "", neutral: !!c.neutralSite,
     };
   }
@@ -960,7 +983,7 @@
       let c = b.querySelector(".cnt");
       if (left) { if (!c) { c = el("b", "cnt"); b.appendChild(c); } c.textContent = left; c.title = `${left} of today's games still to pick`; } else if (c) c.remove();
     });
-    $("#footnote").textContent = `Scores from ESPN · picks lock at ${SP().lock} · refreshes every 2 min during games`;
+    $("#footnote").textContent = `Scores from ESPN · picks lock at ${SP().lock} · refreshes every 2 min during games, every 30 sec in crunch time`;
     const who = $("#who"); who.innerHTML = "";
     if (SECURE) {
       who.appendChild(el("span", "me", S.player ? esc(S.player) : "Viewer"));
@@ -1026,6 +1049,31 @@
     return el("div", "fld", `<div class="ft">${who ? `<span class="who">🏈 ${esc(who)}</span>` : ""}<span>${text}</span>${s.rz ? `<span class="rz">Red zone</span>` : ""}</div><div class="fw">${svg}${spot}</div>`);
   }
 
+  // 🔥 Crunch time: a close game near the end.
+  //   Football: 4th quarter or overtime, within 8 points (one score).
+  //   Basketball: overtime, or under 5 minutes left in the 2nd half, within 6 points.
+  const midBreak = g => /HALFTIME|END_PERIOD/.test(g.statusName);
+  function isCrunch(g, sp = S.sport) {
+    if (g.state !== "in" || midBreak(g)) return false;
+    const diff = Math.abs(g.home.score - g.away.score);
+    if (sp === "cfb") return g.period >= 4 && diff <= 8;
+    return (g.period >= 3 || (g.period === 2 && g.clock <= 300)) && diff <= 6;
+  }
+  // 😱 Upset watch: second half, an unranked team leads a Top 25 team.
+  function isUpset(g, sp = S.sport) {
+    if (g.state !== "in" || /^NCAA Tournament/.test(g.event || "")) return false;
+    if (sp === "cfb" ? g.period < 3 : g.period < 2) return false;
+    const [r, u] = g.home.rank && !g.away.rank ? [g.home, g.away] : g.away.rank && !g.home.rank ? [g.away, g.home] : [];
+    return !!r && u.score > r.score;
+  }
+  // Scores seen on screen so far, so a new one can flash once.
+  const seenScore = {};
+  function flashed(g, side) {
+    const k = `${S.sport}:${g.id}:${side}`, now = g[side].score, was = seenScore[k];
+    seenScore[k] = now;
+    return was != null && was !== now;
+  }
+
   function teamButton(g, side, mine) {
     const t = g[side];
     const picked = mine === t.id;
@@ -1038,7 +1086,7 @@
     b.setAttribute("aria-pressed", picked);
     b.innerHTML = `${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : `<span class="nologo">${esc((t.abbr || "?").slice(0, 4))}</span>`}
       <div class="n">${t.rank ? `<div class="rk">${/^NCAA Tournament/.test(g.event || "") ? `${t.rank} SEED` : `#${t.rank}`}</div>` : ""}<div class="nm${sz}" title="${esc(t.full)}">${hasBall(g, t.id) ? `<span class="ball" title="Has the ball">🏈</span>` : ""}${esc(t.name)}</div><div class="rec">${esc(t.record)}</div>${othersOn(g, t.id)}</div>
-      ${g.state !== "pre" ? `<div class="sc">${t.score}</div>` : ""}`;
+      ${g.state !== "pre" ? `<div class="sc${flashed(g, side) ? " flash" : ""}">${t.score}</div>` : ""}`;
     b.onclick = () => savePick(S.week, g.id, t.id);
     return b;
   }
@@ -1151,7 +1199,11 @@
 
     const buildCard = (g, showDay) => {
       const mine = S.picks[S.week]?.[key(g.id, S.player)];
-      const card = el("div", "game" + (g.trophy ? " trophy" : ""));
+      const card = el("div", "game" + (g.trophy ? " trophy" : "") + (isCrunch(g) ? " crunch" : ""));
+      if (isUpset(g)) {
+        const [r, u] = g.home.rank ? [g.home, g.away] : [g.away, g.home];
+        card.appendChild(el("div", "upset", `<b>😱 Upset watch</b><span>${esc(u.name)} leads #${r.rank} ${esc(r.name)}</span>`));
+      }
       if (g.event) {
         const [name, ...rest] = g.event.split(" - ");
         card.appendChild(el("div", "evt", `<span class="t"><i>${tagIcon(g)}</i><b>${esc(name)}</b>${rest.length ? `<em>&nbsp;· ${esc(rest.join(" · "))}</em>` : ""}</span>${g.place ? `<span class="where">${esc(g.place)}</span>` : ""}`));
@@ -1204,14 +1256,19 @@
     };
 
     // Pinned games float to the top; finished games sink to the bottom.
-    const pinned = shown.filter(g => S.favs[g.id]);
-    const rest = shown.filter(g => !S.favs[g.id]);
+    const crunch = S.conf === "__split" ? [] : shown.filter(g => isCrunch(g));   // close and late: these come first
+    const pinned = shown.filter(g => S.favs[g.id] && !crunch.includes(g));
+    const rest = shown.filter(g => !S.favs[g.id] && !crunch.includes(g));
     const over = g => g.completed || isVoid(g);
     const live = rest.filter(g => !over(g));
     const swing = S.conf === "__split" ? [] : live.filter(g => isSplit(g));   // in progress, and you don't all agree
     const active = live.filter(g => !swing.includes(g));
     const done = rest.filter(over);
 
+    if (crunch.length) {
+      v.appendChild(el("div", "day sec crunch", `<h2>🔥 Crunch time</h2><span>${crunch.length} close game${crunch.length > 1 ? "s" : ""}, late</span><button type="button" class="hrf" aria-label="Refresh scores">↻</button>`));
+      byDay(crunch, true);
+    }
     if (pinned.length) {
       v.appendChild(el("div", "day sec", `<h2>★ Pinned</h2><span>${pinned.length} game${pinned.length > 1 ? "s" : ""}</span><button type="button" class="hrf" aria-label="Refresh scores">↻</button>`));
       byDay(pinned, true);
@@ -1236,7 +1293,7 @@
     games.forEach(g => {
       const tr = el("tr");
       const score = g.state !== "pre" ? `${g.away.abbr} ${g.away.score} – ${g.home.score} ${g.home.abbr}` : `${fmtDay(g.date).slice(0, 3)} ${g.tbd ? "TBD" : fmtTime(g.date)}`;
-      tr.appendChild(el("td", "g", `${g.event ? tagIcon(g) + " " : ""}${esc(g.away.abbr)} ${g.neutral ? "vs" : "@"} ${esc(g.home.abbr)}<small>${esc(score)}${g.completed ? " · Final" : g.state === "in" ? " · Live" : ""}</small>`));
+      tr.appendChild(el("td", "g", `${g.event ? tagIcon(g) + " " : ""}${esc(g.away.abbr)} ${g.neutral ? "vs" : "@"} ${esc(g.home.abbr)}<small>${esc(score)}${g.completed ? " · Final" : g.state === "in" ? ` · ${isCrunch(g) ? "🔥 " : ""}${isUpset(g) ? "😱 " : ""}Live` : ""}</small>`));
       C.PLAYERS.forEach(p => {
         const pk = S.picks[S.week]?.[key(g.id, p)];
         const hide = C.HIDE_PICKS_UNTIL_KICKOFF && p !== S.player && !locked(g);   // viewer: S.player null hides all
@@ -1290,6 +1347,33 @@
     return box;
   }
 
+  // A small card at the start of a new week: who won last week. Shows until the new week's first game is final,
+  // or until it's dismissed.
+  function lastWeekRecap(cur, sp, perWeek) {
+    const i = S.calendar.findIndex(w => w.n === cur), prevN = S.calendar[i - 1]?.n;
+    const pw = perWeek.find(w => w.n === prevN);
+    if (!pw || !pw.done || pw.best <= 0) return null;
+    if ((S.games[cur] || []).some(g => g.completed)) return null;
+    const k = `pickem.recap.${sp}.${prevN}`;
+    try { if (localStorage.getItem(k)) return null; } catch {}
+    const rec = p => `${pw.t[p].ok}–${pw.t[p].bad}`;
+    const won = C.PLAYERS.filter(p => pw.t[p].ok === pw.best);
+    const rest = C.PLAYERS.filter(p => !won.includes(p)).sort((a, b) => pw.t[b].ok - pw.t[a].ok);
+    const label = pw.occ ? `${pw.occ.icon} ${esc(pw.occ.name)}` : `Week ${prevN}`;
+    const names = won.length === 1 ? `<b>${esc(won[0])}</b> won` : `<b>${won.map(esc).join(" & ")}</b> tied`;
+    const prize = pw.occ?.prize ? ` · ${won.length === 1 ? "takes" : "share"} ${esc(pw.occ.prize)} ${pw.occ.icon}` : "";
+    const tro = (S.games[prevN] || []).filter(g => g.trophy && g.completed).map(g => {
+      const w = trophyWinners(g, prevN, sp); return w.length ? `${g.trophy.icon} ${w.map(esc).join(" & ")}` : "";
+    }).filter(Boolean);
+    const card = el("div", "recap", `<button type="button" class="rx" aria-label="Dismiss">×</button>
+      <div class="rh">🏆 ${label} recap</div>
+      <div class="rw">${names}, ${rec(won[0])}${prize}</div>
+      ${rest.length ? `<div class="ro">${rest.map(p => `${esc(p)} ${rec(p)}`).join(" · ")}</div>` : ""}
+      ${tro.length ? `<div class="ro">Trophy games: ${tro.join(" · ")}</div>` : ""}`);
+    card.querySelector(".rx").onclick = () => { try { localStorage.setItem(k, "1"); } catch {} card.remove(); };
+    return card;
+  }
+
   async function renderStandings(v) {
     v.appendChild(el("div", "empty", "Adding up the season…"));
     const sp = S.sport, tok = S.rtok;
@@ -1328,6 +1412,8 @@
       pod.appendChild(el("div", "pl" + (lead ? " lead" : ""),
         `${label ? `<div class="crown">${label}</div>` : ""}<div class="name">${esc(p)}</div><div class="rec">${s.ok}–${s.bad}</div><div class="sub">${pct}% · ${s.weeksWon} week${s.weeksWon === 1 ? "" : "s"} won${!lead && back ? ` · ${back} back` : ""}</div>${s.trophies.length ? `<div class="case" aria-label="Trophies won">${s.trophies.join(" ")}</div>` : ""}`));
     });
+    const recap = lastWeekRecap(cur, sp, perWeek);
+    if (recap) v.appendChild(recap);
     const race = weekRace(cur, sp);
     if (race) v.appendChild(race);
     v.appendChild(pod);
@@ -1407,6 +1493,31 @@
   }
   addEventListener("scroll", updateWhere, { passive: true });
   addEventListener("resize", () => updateWhere());
+
+  // ── pull to refresh (in the Home Screen app, which has no browser reload) ──
+  (() => {
+    const app = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+    if (!app) return;
+    const ind = $("#ptr"), NEED = 70;
+    let d = null;
+    const show = (y, spin) => { ind.classList.toggle("on", y > 0 || spin); ind.classList.toggle("go", !!spin);
+      ind.style.transform = `translate(-50%, ${Math.min(y, 90)}px) rotate(${y * 3}deg)`; ind.classList.toggle("ready", y >= NEED); };
+    addEventListener("touchstart", e => { d = scrollY <= 0 && $("#sheetbg").hidden && e.touches.length === 1 && !refreshing ? { y: e.touches[0].clientY, dy: 0 } : null; }, { passive: true });
+    addEventListener("touchmove", e => {
+      if (!d) return;
+      d.dy = (e.touches[0].clientY - d.y) * .5;          // feels heavy, like a native pull
+      if (d.dy <= 0 || scrollY > 0) { d = null; show(0); return; }
+      show(d.dy);
+    }, { passive: true });
+    const end = async () => {
+      if (!d) return;
+      const go = d.dy >= NEED; d = null;
+      if (!go) return show(0);
+      show(56, true);
+      try { await doRefresh(); toast("Scores updated " + fmtTime(new Date())); } finally { show(0); }
+    };
+    addEventListener("touchend", end); addEventListener("touchcancel", end);
+  })();
 
   // ── stats sheet: tap a game that has started ─────────────────────────────
   const ST_ = { id: null, sum: null, at: 0, timer: 0, err: "" };
@@ -1795,12 +1906,15 @@
     await openSport();
     refreshReminders();
     setTimeout(primeOther, 1500);
-    // Auto-refresh scores while games are on (every 2 minutes)
+    // Auto-refresh scores while games are on: every 2 minutes, every 30 seconds while a game is in crunch time
+    let autoAt = Date.now();
     setInterval(() => {
-      if (document.hidden || S.saving || S.week == null) return;
-      const live = (S.games[S.week] || []).some(g => g.state === "in" || (g.state === "pre" && g.date - Date.now() < 3600000));
-      if (live && S.tab !== "standings") showWeek(S.week, true);
-    }, 120000);
+      if (document.hidden || S.saving || S.week == null || refreshing) return;
+      const gs = S.games[S.week] || [];
+      const live = gs.some(g => g.state === "in" || (g.state === "pre" && g.date - Date.now() < 3600000));
+      const every = gs.some(g => isCrunch(g)) ? 30000 : 120000;
+      if (live && S.tab !== "standings" && Date.now() - autoAt >= every - 1000) { autoAt = Date.now(); showWeek(S.week, true); }
+    }, 30000);
     document.addEventListener("visibilitychange", () => { if (!document.hidden && S.week != null) { showWeek(S.week, true); primeOther(); } });
   })();
 })();
