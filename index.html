@@ -267,6 +267,60 @@
   /* ── misc ───────────────────────────────── */
   .empty{padding:40px 16px;text-align:center;color:var(--mute)}
   .empty b{display:block;font-family:var(--display);font-size:24px;color:var(--ink);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+  /* ── sticky "where am I" bar ── */
+  .where{position:fixed;left:0;right:0;top:env(safe-area-inset-top);z-index:40;background:var(--bar,var(--ink));color:#fff;transform:translateY(-110%);transition:transform .2s;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+  .where.on{transform:none}
+  .where .wi{max-width:720px;margin:0 auto;padding:6px 8px 6px 16px;display:flex;align-items:center;gap:8px;min-height:44px}
+  .where .wl{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .where .ww{font-size:12px;color:rgba(255,255,255,.65);white-space:nowrap;margin-left:auto}
+  .where button{flex:none;width:40px;height:40px;border-radius:50%;font-size:22px;line-height:1;color:#fff;background:rgba(255,255,255,.12)}
+  body.spin .where button{animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* ── tap a started game ── */
+  .game.tap{cursor:pointer}
+  .game.tap .team:disabled{pointer-events:none}
+  .meta .sx{margin-left:8px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+  /* ── stats sheet ── */
+  .sheetbg{position:fixed;inset:0;z-index:60;background:rgba(10,20,14,.45);display:flex;align-items:flex-end;justify-content:center}
+  .sheetbg[hidden]{display:none}
+  .stats{background:var(--card);width:100%;max-width:560px;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;border-radius:18px 18px 0 0;padding:0 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -10px 30px rgba(0,0,0,.25)}
+  .stats .sh{position:sticky;top:0;background:var(--card);padding:12px 0 10px;border-bottom:1px solid var(--line);z-index:1}
+  .stats .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 10px}
+  .stats .x{position:absolute;right:-6px;top:8px;width:40px;height:40px;border-radius:50%;font-size:22px;color:var(--ink-2)}
+  .stats .sb{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+  .stats .sb .tm{display:flex;align-items:center;gap:8px;min-width:0}
+  .stats .sb .tm.h{flex-direction:row-reverse;text-align:right}
+  .stats .sb img{width:30px;height:30px;object-fit:contain}
+  .stats .sb b{font-family:var(--display);font-size:20px;letter-spacing:.03em}
+  .stats .sb .sc{font-family:var(--display);font-weight:800;font-size:30px;white-space:nowrap}
+  .stats .sb .sc i{font-style:normal;color:var(--mute);font-size:18px;margin:0 6px}
+  .stats .stl{text-align:center;font-size:12px;font-weight:700;color:var(--ink-2);margin-top:2px}
+  .stats .stl.live{color:#C0392B}
+  .stats h3{font-family:var(--display);font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:16px 0 6px}
+  .stats table{width:100%;border-collapse:collapse;font-size:13px;background:none;border-radius:0;box-shadow:none;overflow:visible}
+  .stats th,.stats td{padding:4px 2px;border-bottom:0}
+  .stats th{background:none;color:var(--mute);font-family:inherit;font-size:11px;font-weight:600;letter-spacing:0}
+  .stats .ls td,.stats .ls th{text-align:center;padding:4px 2px;font-variant-numeric:tabular-nums}
+  .stats .ls th{font-size:11px;color:var(--mute);font-weight:600}
+  .stats .ls td:first-child,.stats .ls th:first-child{text-align:left;font-weight:700}
+  .stats .ls td:last-child{font-weight:800}
+  .stats .cmp td{padding:6px 0;border-top:1px solid #EEF1EC;font-variant-numeric:tabular-nums}
+  .stats .cmp td:first-child{text-align:left;width:28%}.stats .cmp td:last-child{text-align:right;width:28%}
+  .stats .cmp td.l{text-align:center;color:var(--ink-2);font-size:12px}
+  .stats .cmp td.hi{font-weight:800}
+  .stats .lead td{padding:6px 0;border-top:1px solid #EEF1EC;vertical-align:top;width:50%}
+  .stats .lead td+td{text-align:right}
+  .stats .lead small{display:block;color:var(--mute);font-size:11px}
+  .stats .lead .c{font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;padding-top:10px;border:0;text-align:center}
+  .stats .wp{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:4px 0}
+  .stats .wpl{display:flex;justify-content:space-between;font-size:12px;font-weight:700}
+  .stats .lp{font-size:13px;color:var(--ink);background:#F4F6F3;border-radius:10px;padding:8px 10px;margin-top:10px}
+  .stats .lp small{display:block;font-size:11px;color:var(--mute);font-weight:600;margin-bottom:2px}
+  .stats .sp{font-size:13px;padding:6px 0;border-top:1px solid #EEF1EC}
+  .stats .sp small{color:var(--mute);font-weight:600}
+  .stats .fld{padding:10px 0 0;border:0}
+  .stats .foot{font-size:11px;color:var(--mute);text-align:center;margin-top:16px}
+  .stats .empty2{color:var(--mute);font-size:13px;padding:10px 0}
   .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25);white-space:nowrap}
   .toast.show{opacity:1;transform:translateX(-50%)}
   .toast.err{background:var(--loss)}
@@ -322,6 +376,8 @@
   <main id="view"><div class="empty">Loading…</div></main>
   <p class="note" id="footnote">Scores from ESPN · picks lock at kickoff · refreshes every 2 min during games</p>
 </div>
+<div class="where" id="where" aria-hidden="true"><div class="wi"><span class="wl" id="wl"></span><span class="ww" id="ww"></span><button type="button" id="wrf" aria-label="Refresh scores">↻</button></div></div>
+<div class="sheetbg" id="sheetbg" hidden><div class="stats" id="stats" role="dialog" aria-modal="true" aria-label="Game stats"></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -524,6 +580,7 @@
         rank: rk && rk <= 25 ? rk : null, record: x.records?.find(r => r.type === "total")?.summary || "",
         conf: String(x.team.conferenceId ?? ""),
         score: Number(x.score ?? 0), winner: !!x.winner,
+        ls: (x.linescores || []).map(l => l.displayValue ?? l.value),
       };
     };
     const home = t("home"), away = t("away");
@@ -536,6 +593,7 @@
       down: s0.down > 0 ? s0.down : 0, dist: s0.distance > 0 ? s0.distance : 0,
       dd: s0.down > 0 ? (s0.shortDownDistanceText || "") : "", spot: s0.possessionText || "", rz: !!s0.isRedZone,
     } : null;
+    const last = st.state === "in" ? (s0?.lastPlay?.text || "") : "";
     let winner = null;
     if (st.completed) winner = home.winner ? home.id : away.winner ? away.id : (home.score > away.score ? home.id : away.score > home.score ? away.id : null);
     // Basketball only: a game with no tip time yet comes through as midnight Eastern, which
@@ -576,7 +634,7 @@
       if (event && c.neutralSite) place = c.venue?.address?.city || "";
     }
     return {
-      id: ev.id, date, tbd, event, place, region, home, away, winner, sit, post: !!post, cfp, round: round ? round[1] : null, trophy,
+      id: ev.id, date, tbd, event, place, region, home, away, winner, sit, last, post: !!post, cfp, round: round ? round[1] : null, trophy,
       state: st.state, completed: !!st.completed, statusName: st.name || "", statusText: st.shortDetail || st.description || "",
       tv: c.broadcasts?.[0]?.names?.join("/") || "", neutral: !!c.neutralSite,
     };
@@ -1113,6 +1171,11 @@
       else if (locked(g) && !mine) badge = `<span class="grade ${g.completed ? "bad" : "lock"}">✗ No pick</span>`;
       else if (locked(g)) badge = `<span class="grade lock">Locked</span>`;
       const meta = el("div", "meta", `<span class="st ${stCls}">${stTxt}</span><span class="mr">${badge}</span>`);
+      if (g.state !== "pre" && !isVoid(g)) {   // started games: tap anywhere on the card for stats (picks are locked by then)
+        card.classList.add("tap");
+        meta.querySelector(".st").insertAdjacentHTML("beforeend", `<span class="sx">Stats ›</span>`);
+        card.addEventListener("click", e => { if (!e.target.closest(".fav, .tbar, input, a, button:not(:disabled)")) openStats(g.id); });
+      }
       const on = !!S.favs[g.id];
       const hb = el("button", "fav" + (on ? " on" : ""), on ? "♥" : "♡");
       hb.type = "button";
@@ -1314,9 +1377,140 @@
     const v = $("#view"); v.innerHTML = "";
     if (tbFocus) requestAnimationFrame(() => { const i = v.querySelector(`input[data-tb="${tbFocus}"]`); if (i) i.focus(); });
     if (!S.player && (S.tab === "picks" || !SECURE)) { renderWelcome(v); return; }
+    setTimeout(updateWhere, 0);
+    if (ST_.id) { if (ST_.sport !== S.sport) closeStats(); else drawStats(); }
     if (S.tab === "picks") renderPicks(v);
     else if (S.tab === "sheet") renderSheet(v);
     else { const tok = S.rtok; renderStandings(v).catch(e => { console.error(e); if (tok === S.rtok) v.innerHTML = `<div class="empty"><b>Couldn't load standings</b>${esc(e.message)}</div>`; }); }
+  }
+
+  // ── sticky bar: which section you're in, plus a Refresh you can reach ─────
+  function updateWhere() {
+    const bar = $("#where"), tabs = document.querySelector(".tabs");
+    const show = tabs.getBoundingClientRect().bottom < 0 && S.week != null;
+    bar.classList.toggle("on", show); bar.setAttribute("aria-hidden", !show);
+    if (!show) return;
+    const atEnd = innerHeight + scrollY >= document.documentElement.scrollHeight - 4;   // a short last section never reaches the top
+    const lim = Math.max(bar.offsetTop + bar.offsetHeight + 6, atEnd ? innerHeight * .35 : 0);   // bar's bottom once slid in (ignores the slide animation)
+    let sec = null, day = null;
+    if (S.tab === "picks") for (const h of $("#view").querySelectorAll(".day")) {
+      if (h.getBoundingClientRect().top > lim) break;
+      if (h.classList.contains("sec")) { sec = h; day = null; } else day = h;
+    }
+    const t = h => h?.querySelector("h2")?.textContent || "";
+    const label = S.tab === "sheet" ? "The sheet" : S.tab === "standings" ? "Standings" : sec && day ? `${t(sec)} · ${t(day)}` : t(sec) || t(day) || "My picks";
+    $("#wl").textContent = label;
+    $("#ww").textContent = $("#wlabel").textContent;
+  }
+  addEventListener("scroll", updateWhere, { passive: true });
+  addEventListener("resize", () => updateWhere());
+
+  // ── stats sheet: tap a game that has started ─────────────────────────────
+  const ST_ = { id: null, sum: null, at: 0, timer: 0, err: "" };
+  const STAT_ROWS = {
+    cfb: [["totalYards", "Total yards"], ["netPassingYards", "Passing"], ["rushingYards", "Rushing"], ["firstDowns", "1st downs"],
+          ["thirdDownEff", "3rd downs"], ["turnovers", "Turnovers", "low"], ["totalPenaltiesYards", "Penalties", "low"], ["possessionTime", "Possession"]],
+    cbb: [["fieldGoalsMade-fieldGoalsAttempted", "FG"], ["fieldGoalPct", "FG %"], ["threePointFieldGoalsMade-threePointFieldGoalsAttempted", "3-pointers"],
+          ["freeThrowsMade-freeThrowsAttempted", "Free throws"], ["totalRebounds", "Rebounds"], ["assists", "Assists"],
+          ["turnovers", "Turnovers", "low"], ["fouls", "Fouls", "low"], ["largestLead", "Largest lead"]],
+  };
+  const LEAD_CATS = { cfb: ["passingYards", "rushingYards", "receivingYards"], cbb: ["points", "rebounds", "assists"] };
+  const findGame = id => (S.games[S.week] || []).find(g => g.id === id);
+
+  function openStats(id) {
+    ST_.id = id; ST_.sum = null; ST_.err = ""; ST_.sport = S.sport;
+    $("#sheetbg").hidden = false; document.documentElement.style.overflow = "hidden";
+    $("#stats").scrollTop = 0;
+    drawStats(); loadStats();
+    clearInterval(ST_.timer);
+    ST_.timer = setInterval(() => { if (!document.hidden && findGame(ST_.id)?.state === "in") doRefresh(); }, 30000);   // live: keep it fresh while it's open
+  }
+  function closeStats() {
+    ST_.id = null; clearInterval(ST_.timer);
+    $("#sheetbg").hidden = true; document.documentElement.style.overflow = "";
+  }
+  $("#sheetbg").addEventListener("click", e => { if (e.target.id === "sheetbg" || e.target.closest(".x")) closeStats(); });
+  addEventListener("keydown", e => { if (e.key === "Escape" && ST_.id) closeStats(); });
+
+  async function loadStats() {
+    const id = ST_.id, sp = ST_.sport;
+    if (!id) return;
+    try {
+      const r = await fetch(`${(SPORTS[sp].espn || ESPN).replace(/scoreboard$/, "summary")}?event=${id}`);
+      if (!r.ok) throw new Error("ESPN " + r.status);
+      const j = await r.json();
+      if (ST_.id !== id) return;
+      ST_.sum = j; ST_.at = Date.now(); ST_.err = "";
+    } catch (e) { if (ST_.id === id) ST_.err = e.message; }
+    if (ST_.id === id) drawStats();
+  }
+
+  function drawStats() {
+    const g = findGame(ST_.id), box = $("#stats");
+    if (!g) { closeStats(); return; }
+    const sp = ST_.sport, sum = ST_.sum, keep = box.scrollTop;
+    const img = t => t.logo ? `<img src="${esc(t.logo)}" alt="">` : "";
+    const col = c => "#" + String(c || "12211A").replace("#", "");
+    let h = `<div class="sh"><div class="grab"></div><button type="button" class="x" aria-label="Close">×</button>
+      <div class="sb"><div class="tm">${img(g.away)}<b>${esc(g.away.abbr)}</b></div>
+      <div class="sc">${g.away.score}<i>–</i>${g.home.score}</div>
+      <div class="tm h">${img(g.home)}<b>${esc(g.home.abbr)}</b></div></div>
+      <div class="stl${g.state === "in" ? " live" : ""}">${esc(g.statusText)}</div></div>`;
+
+    // live situation
+    if (sp === "cfb") { const f = fieldStrip(g); if (f) h += f.outerHTML; }
+    const plays = sum?.plays, lastTxt = g.last || (g.state === "in" && plays?.length ? plays[plays.length - 1].text : "");
+    if (lastTxt) h += `<div class="lp"><small>Last play</small>${esc(lastTxt)}</div>`;
+
+    // by period
+    const n = Math.max(g.away.ls.length, g.home.ls.length);
+    if (n) {
+      const lab = i => sp === "cfb" ? (i < 4 ? `Q${i + 1}` : i === 4 ? "OT" : `${i - 3}OT`) : (i < 2 ? `${i + 1}H` : i === 2 ? "OT" : `${i - 1}OT`);
+      const row = t => `<tr><td>${esc(t.abbr)}</td>${Array.from({ length: n }, (_, i) => `<td>${esc(t.ls[i] ?? "")}</td>`).join("")}<td>${t.score}</td></tr>`;
+      h += `<h3>Scoring</h3><table class="ls"><tr><th></th>${Array.from({ length: n }, (_, i) => `<th>${lab(i)}</th>`).join("")}<th>T</th></tr>${row(g.away)}${row(g.home)}</table>`;
+    }
+
+    // ESPN's win chance (live only)
+    const wp = sum?.winprobability?.length ? sum.winprobability[sum.winprobability.length - 1] : null;
+    if (wp && g.state === "in" && wp.homeWinPercentage != null) {
+      const hp = Math.round(wp.homeWinPercentage * 1000) / 10, ap = Math.round((100 - hp) * 10) / 10;
+      h += `<h3>Win chance <span style="text-transform:none;letter-spacing:0;font-weight:500">(ESPN)</span></h3>
+        <div class="wpl"><span>${esc(g.away.abbr)} ${ap}%</span><span>${hp}% ${esc(g.home.abbr)}</span></div>
+        <div class="wp"><div style="width:${ap}%;background:${col(g.away.color)}"></div><div style="width:${hp}%;background:${col(g.home.color)}"></div></div>`;
+    }
+
+    // team stats
+    const bt = sum?.boxscore?.teams || [];
+    const tAway = bt.find(t => t.homeAway === "away") || bt.find(t => t.team?.id === g.away.id);
+    const tHome = bt.find(t => t.homeAway === "home") || bt.find(t => t.team?.id === g.home.id);
+    const sv = (t, k) => t?.statistics?.find(x => x.name === k)?.displayValue;
+    const rows = STAT_ROWS[sp].map(([k, lab, low]) => {
+      const a = sv(tAway, k), b = sv(tHome, k);
+      if (a == null && b == null) return "";
+      const na = parseFloat(String(a).replace(":", ".")), nb = parseFloat(String(b).replace(":", "."));
+      const better = isNaN(na) || isNaN(nb) || na === nb || /-|\//.test(String(a)) ? 0 : (low ? na < nb : na > nb) ? -1 : 1;
+      return `<tr><td class="${better < 0 ? "hi" : ""}">${esc(a ?? "–")}</td><td class="l">${lab}</td><td class="${better > 0 ? "hi" : ""}">${esc(b ?? "–")}</td></tr>`;
+    }).join("");
+    if (rows) h += `<h3>Team stats</h3><table class="cmp"><tr><td><b>${esc(g.away.abbr)}</b></td><td class="l"></td><td><b>${esc(g.home.abbr)}</b></td></tr>${rows}</table>`;
+
+    // leaders
+    const L = sum?.leaders || [];
+    const lt = id => L.find(x => x.team?.id === id) || null;
+    const la = lt(g.away.id), lh = lt(g.home.id);
+    const cell = (x, cat) => { const c = x?.leaders?.find(c => c.name === cat)?.leaders?.[0]; return c ? `<b>${esc(c.athlete?.shortName || c.athlete?.displayName || "")}</b><small>${esc(c.displayValue || "")}</small>` : `<small>–</small>`; };
+    const lrows = LEAD_CATS[sp].filter(cat => (la || lh) && [la, lh].some(x => x?.leaders?.some(c => c.name === cat))).map(cat => {
+      const nm = (la || lh).leaders.find(c => c.name === cat)?.displayName || [la, lh].map(x => x?.leaders?.find(c => c.name === cat)?.displayName).find(Boolean) || cat;
+      return `<tr><td colspan="2" class="c">${esc(nm)}</td></tr><tr><td>${cell(la, cat)}</td><td>${cell(lh, cat)}</td></tr>`;
+    }).join("");
+    if (lrows) h += `<h3>Leaders</h3><table class="lead">${lrows}</table>`;
+
+    // football: recent scoring plays
+    const scp = sp === "cfb" ? (sum?.scoringPlays || []).slice(-4).reverse() : [];
+    if (scp.length) h += `<h3>Recent scores</h3>` + scp.map(p => `<div class="sp"><small>${esc(p.team?.abbreviation || "")} · Q${p.period?.number ?? ""} ${esc(p.clock?.displayValue || "")}</small><br>${esc(p.text || "")}</div>`).join("");
+
+    if (!sum) h += `<div class="empty2">${ST_.err ? "Couldn't load stats from ESPN. Try Refresh." : "Loading stats…"}</div>`;
+    h += `<div class="foot">${ST_.at ? `Stats updated ${fmtTime(new Date(ST_.at))}` : ""}${g.state === "in" ? " · updates every 30 sec while open" : ""}</div>`;
+    box.innerHTML = h; box.scrollTop = keep;
   }
 
   // ── boot & events ────────────────────────────────────────────────────────
@@ -1338,17 +1532,21 @@
   $("#next").onclick = () => stepWeek(1);
 
   // Manual refresh, for the Home Screen app where there's no browser reload button.
-  $("#refresh").onclick = async () => {
-    if (S.week == null) return;
+  let refreshing = null;
+  async function doRefresh() {
+    if (S.week == null || refreshing) return refreshing;
     const b = $("#refresh"), sp = S.sport;
-    b.disabled = true; b.textContent = "Refreshing…";
-    try {
+    b.disabled = true; b.textContent = "Refreshing…"; document.body.classList.add("spin");
+    return refreshing = (async () => { try {
       const cur = currentWeek(sp);
       if (cur !== S.week) { await loadWeek(cur, true, sp); await loadPicks(cur, sp); }   // standings count the current week too
       await showWeek(S.week, true);
       primedAt = 0; primeOther();
-    } finally { b.disabled = false; b.textContent = "Refresh"; }
-  };
+      if (ST_.id) await loadStats(true);
+    } finally { b.disabled = false; b.textContent = "Refresh"; document.body.classList.remove("spin"); refreshing = null; } })();
+  }
+  $("#refresh").onclick = () => doRefresh();
+  $("#wrf").onclick = async () => { await doRefresh(); toast("Scores updated " + fmtTime(new Date())); };
 
   // Open whichever sport is showing: first visit loads its schedule and jumps to the current week.
   async function openSport() {
