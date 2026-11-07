@@ -1050,14 +1050,14 @@
   }
 
   // 🔥 Crunch time: a close game near the end.
-  //   Football: 4th quarter or overtime, within 8 points (one score).
-  //   Basketball: overtime, or under 5 minutes left in the 2nd half, within 6 points.
+  //   Football: under 3 minutes left in the 4th quarter, or overtime, within 8 points (one score).
+  //   Basketball: 2 minutes or less left in the 2nd half, or overtime, within 5 points.
   const midBreak = g => /HALFTIME|END_PERIOD/.test(g.statusName);
   function isCrunch(g, sp = S.sport) {
     if (g.state !== "in" || midBreak(g)) return false;
     const diff = Math.abs(g.home.score - g.away.score);
-    if (sp === "cfb") return g.period >= 4 && diff <= 8;
-    return (g.period >= 3 || (g.period === 2 && g.clock <= 300)) && diff <= 6;
+    if (sp === "cfb") return (g.period >= 5 || (g.period === 4 && g.clock < 180)) && diff <= 8;
+    return (g.period >= 3 || (g.period === 2 && g.clock <= 120)) && diff <= 5;
   }
   // 😱 Upset watch: second half, an unranked team leads a Top 25 team.
   function isUpset(g, sp = S.sport) {
