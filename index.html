@@ -199,7 +199,12 @@
   .fld .ft b{color:var(--ink);font-weight:700}
   .fld .who{font-weight:700;color:var(--ink)}
   .fld .rz{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:#C0392B;padding:2px 7px;border-radius:999px}
+  .fld .fw{position:relative}
   .fld svg{display:block;width:100%;height:22px}
+  .fld .spot{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #12211A}
+  .fld .dir{position:absolute;top:50%;width:0;height:0;margin-top:-4px;border-top:4px solid transparent;border-bottom:4px solid transparent}
+  .fld .dir.r{margin-left:9px;border-left:6px solid #fff}
+  .fld .dir.l{margin-left:-15px;border-right:6px solid #fff}
   .others{display:flex;gap:3px;margin-top:3px}
   .team.home .others{justify-content:flex-end}
   .others span{min-width:30px;height:18px;padding:0 5px;border-radius:999px;display:inline-grid;place-items:center;font:800 9.5px/1 var(--body);letter-spacing:.04em;color:#fff;box-shadow:0 0 0 1.5px #fff}
@@ -952,10 +957,12 @@
       <rect x="0" y="0" width="120" height="20" rx="3" fill="#3B8A4C"/>
       <rect x="0" y="0" width="10" height="20" fill="${col(g.away.color)}"/><rect x="110" y="0" width="10" height="20" fill="${col(g.home.color)}"/>
       ${lines}${gain != null ? `<line x1="${gain}" y1="0" x2="${gain}" y2="20" stroke="#FFD43B" stroke-width="1.4"/>` : ""}
-      ${dir ? `<path d="M${x + dir * 3.2} 10 l${-dir * 2.6} -2.6 v5.2 z" fill="#fff"/>` : ""}
-      <ellipse cx="${x}" cy="10" rx="3.1" ry="2" fill="#7A3E12" stroke="#fff" stroke-width=".5"/></svg>`;
+      </svg>`;
+    // the ball spot is drawn over the stretched field so it stays a round dot on any screen width
+    const pct = (x / 120 * 100).toFixed(2);
+    const spot = `<span class="spot" style="left:${pct}%" data-x="${x}"></span>${dir ? `<span class="dir ${dir > 0 ? "r" : "l"}" style="left:${pct}%"></span>` : ""}`;
     const text = s.dd ? `<b>${esc(s.dd)}</b>${s.spot ? ` at ${esc(s.spot)}` : ""}` : s.spot ? `Ball at ${esc(s.spot)}` : "Live";
-    return el("div", "fld", `<div class="ft">${who ? `<span class="who">🏈 ${esc(who)}</span>` : ""}<span>${text}</span>${s.rz ? `<span class="rz">Red zone</span>` : ""}</div>${svg}`);
+    return el("div", "fld", `<div class="ft">${who ? `<span class="who">🏈 ${esc(who)}</span>` : ""}<span>${text}</span>${s.rz ? `<span class="rz">Red zone</span>` : ""}</div><div class="fw">${svg}${spot}</div>`);
   }
 
   function teamButton(g, side, mine) {
