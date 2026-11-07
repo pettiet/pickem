@@ -87,7 +87,6 @@
   .team .nologo{width:36px;height:36px;flex:none;border-radius:50%;background:#E2E7E1;color:var(--ink-2);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.02em}
 
   /* ── basketball occasions (Feast Week and friends) ── */
-  .day.sec.split h2{color:#B3262E}
   .race{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px 10px;margin:0 0 12px}
   .race .rt{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
   .race .rt b{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase}
@@ -170,9 +169,14 @@
   .progress b{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:.02em}
 
   /* ── day groups & game cards ────────────── */
-  .day{margin:18px 0 8px;display:flex;align-items:baseline;gap:10px}
-  .day h2{font-family:var(--display);font-weight:700;font-size:22px;text-transform:uppercase;letter-spacing:.04em;margin:0}
-  .day span{font-size:12px;color:var(--mute);font-weight:500}
+  /* section headers: green bands that stick to the top while you scroll through their games;
+     the next one slides up over it */
+  .day{position:sticky;top:env(safe-area-inset-top);z-index:30;margin:16px 0 8px;display:flex;align-items:center;gap:10px;
+       background:var(--bar,var(--ink));color:#fff;border-radius:12px;padding:4px 4px 4px 14px;min-height:44px;box-shadow:0 4px 12px rgba(0,0,0,.14)}
+  .day h2{font-family:var(--display);font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:.04em;margin:0;white-space:nowrap}
+  .day span{font-size:12px;color:rgba(255,255,255,.7);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .day .hrf{margin-left:auto;flex:none;width:36px;height:36px;border-radius:50%;font-size:20px;line-height:1;color:#fff;background:rgba(255,255,255,.12)}
+  body.spin .day .hrf{animation:spin .8s linear infinite}
   .game{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:8px;overflow:hidden}
   .matchup{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:stretch}   /* both sides always get equal room, so nothing is pushed off the right edge */
   .team{display:flex;align-items:center;gap:10px;padding:12px 10px;text-align:left;position:relative;transition:background .15s,color .15s;min-height:66px}
@@ -224,8 +228,7 @@
   .fav{width:30px;height:30px;margin:-6px -4px -6px 0;border-radius:50%;display:grid;place-items:center;font-size:17px;color:var(--lock);line-height:1}
   .fav:hover{background:#F4F6F3}
   .fav.on{color:#E0435C}
-  .day.sec h2{color:var(--ink)}
-  .day.sec.finals{margin-top:26px;padding-top:14px;border-top:2px solid var(--line)}
+  .day.sec.finals{margin-top:24px}
 
   /* ── sheet (compare) ────────────────────── */
   table{width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);font-size:13px}
@@ -1194,7 +1197,7 @@
         if (!showDayInMeta && dk !== lastDay) {
           lastDay = dk;
           const n = list.filter(x => dayKey(x.date) === dk).length;
-          v.appendChild(el("div", "day", `<h2>${fmtDay(g.date)}</h2><span>${fmtDate(g.date)} · ${n} game${n > 1 ? "s" : ""}</span>`));
+          v.appendChild(el("div", "day", `<h2>${fmtDay(g.date)}</h2><span>${fmtDate(g.date)} · ${n} game${n > 1 ? "s" : ""}</span><button type="button" class="hrf" aria-label="Refresh scores">↻</button>`));
         }
         v.appendChild(buildCard(g, showDayInMeta));
       });
@@ -1210,17 +1213,17 @@
     const done = rest.filter(over);
 
     if (pinned.length) {
-      v.appendChild(el("div", "day sec", `<h2>★ Pinned</h2><span>${pinned.length} game${pinned.length > 1 ? "s" : ""}</span>`));
+      v.appendChild(el("div", "day sec", `<h2>★ Pinned</h2><span>${pinned.length} game${pinned.length > 1 ? "s" : ""}</span><button type="button" class="hrf" aria-label="Refresh scores">↻</button>`));
       byDay(pinned, true);
     }
     if (swing.length) {
-      v.appendChild(el("div", "day sec split", `<h2>⚡ Split picks</h2><span>${swing.length} live game${swing.length > 1 ? "s" : ""} where you don't all agree</span>`));
+      v.appendChild(el("div", "day sec split", `<h2>⚡ Split picks</h2><span>${swing.length} live game${swing.length > 1 ? "s" : ""} · picks differ</span><button type="button" class="hrf" aria-label="Refresh scores">↻</button>`));
       byDay(swing, true);
     }
     byDay(active, false);
     if (done.length) {
-      v.appendChild(el("div", "day sec finals", `<h2>✓ Finals</h2><span>${done.length} game${done.length > 1 ? "s" : ""}</span>`));
-      byDay(done, false);
+      v.appendChild(el("div", "day sec finals", `<h2>✓ Finals</h2><span>${done.length} game${done.length > 1 ? "s" : ""}</span><button type="button" class="hrf" aria-label="Refresh scores">↻</button>`));
+      byDay(done, true);   // one sticky Finals header; each card says its day
     }
   }
 
@@ -1387,7 +1390,7 @@
   // ── sticky bar: which section you're in, plus a Refresh you can reach ─────
   function updateWhere() {
     const bar = $("#where"), tabs = document.querySelector(".tabs");
-    const show = tabs.getBoundingClientRect().bottom < 0 && S.week != null;
+    const show = tabs.getBoundingClientRect().bottom < 0 && S.week != null && S.tab !== "picks";
     bar.classList.toggle("on", show); bar.setAttribute("aria-hidden", !show);
     if (!show) return;
     const atEnd = innerHeight + scrollY >= document.documentElement.scrollHeight - 4;   // a short last section never reaches the top
@@ -1546,6 +1549,7 @@
     } finally { b.disabled = false; b.textContent = "Refresh"; document.body.classList.remove("spin"); refreshing = null; } })();
   }
   $("#refresh").onclick = () => doRefresh();
+  $("#view").addEventListener("click", async e => { if (e.target.closest(".hrf")) { await doRefresh(); toast("Scores updated " + fmtTime(new Date())); } });
   $("#wrf").onclick = async () => { await doRefresh(); toast("Scores updated " + fmtTime(new Date())); };
 
   // Open whichever sport is showing: first visit loads its schedule and jumps to the current week.
