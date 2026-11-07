@@ -192,6 +192,14 @@
   .team.home.picked .nm::after{content:"";margin:0}
   .team.home.picked .nm::before{content:"✓";margin-right:6px;font-size:14px;vertical-align:middle}
   .team.dim img,.team.dim .nologo,.team.dim .rk,.team.dim .nm,.team.dim .rec,.team.dim .sc{opacity:.55}   /* the losing side fades; pick tags stay bright */
+  .team .nm .ball{font-size:.8em;margin-right:4px;vertical-align:.05em}
+  .team.home .nm .ball{margin:0 0 0 4px}
+  .fld{padding:6px 12px 8px;border-top:1px solid #EEF1EC}
+  .fld .ft{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2);margin-bottom:5px;white-space:nowrap;overflow:hidden}
+  .fld .ft b{color:var(--ink);font-weight:700}
+  .fld .who{font-weight:700;color:var(--ink)}
+  .fld .rz{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:#C0392B;padding:2px 7px;border-radius:999px}
+  .fld svg{display:block;width:100%;height:22px}
   .others{display:flex;gap:3px;margin-top:3px}
   .team.home .others{justify-content:flex-end}
   .others span{min-width:30px;height:18px;padding:0 5px;border-radius:999px;display:inline-grid;place-items:center;font:800 9.5px/1 var(--body);letter-spacing:.04em;color:#fff;box-shadow:0 0 0 1.5px #fff}
@@ -515,6 +523,14 @@
     };
     const home = t("home"), away = t("away");
     const st = ev.status?.type || c.status?.type || {};
+    // Football, live: who has the ball, down and distance, and where the ball is.
+    // ESPN's yardLine counts from the home team's goal line (0) to the away team's (100).
+    const s0 = c.situation;
+    const sit = s0 && st.state === "in" && Number.isFinite(s0.yardLine) ? {
+      poss: s0.possession ? String(s0.possession) : "", yl: Math.max(0, Math.min(100, s0.yardLine)),
+      down: s0.down > 0 ? s0.down : 0, dist: s0.distance > 0 ? s0.distance : 0,
+      dd: s0.down > 0 ? (s0.shortDownDistanceText || "") : "", spot: s0.possessionText || "", rz: !!s0.isRedZone,
+    } : null;
     let winner = null;
     if (st.completed) winner = home.winner ? home.id : away.winner ? away.id : (home.score > away.score ? home.id : away.score > home.score ? away.id : null);
     // Basketball only: a game with no tip time yet comes through as midnight Eastern, which
@@ -555,7 +571,7 @@
       if (event && c.neutralSite) place = c.venue?.address?.city || "";
     }
     return {
-      id: ev.id, date, tbd, event, place, region, home, away, winner, post: !!post, cfp, round: round ? round[1] : null, trophy,
+      id: ev.id, date, tbd, event, place, region, home, away, winner, sit, post: !!post, cfp, round: round ? round[1] : null, trophy,
       state: st.state, completed: !!st.completed, statusName: st.name || "", statusText: st.shortDetail || st.description || "",
       tv: c.broadcasts?.[0]?.names?.join("/") || "", neutral: !!c.neutralSite,
     };
@@ -919,6 +935,29 @@
     return who.length ? `<div class="others">${who.map(p => { const t = personTag(p); return `<span style="background:${t.color}" title="${esc(p)}">${esc(t.tag)}</span>`; }).join("")}</div>` : "";
   }
 
+  const liveField = g => g.sit && g.state === "in" && !/HALFTIME|END_PERIOD/.test(g.statusName);
+  const hasBall = (g, id) => liveField(g) && g.sit.poss === id;
+
+  // Mini field for a live football game: away end zone on the left, home on the right (same as the card),
+  // the ball where it is, an arrow for the direction of travel, and the yellow line to gain.
+  function fieldStrip(g) {
+    if (!liveField(g)) return null;
+    const s = g.sit, x = 110 - s.yl;                                   // field runs 10..110 in the drawing
+    const dir = s.poss === g.home.id ? -1 : s.poss === g.away.id ? 1 : 0;   // home attacks toward the left end zone
+    const col = c => "#" + String(c || "12211A").replace("#", "");
+    const lines = [20, 30, 40, 50, 60, 70, 80, 90, 100].map(v => `<line x1="${v}" y1="1" x2="${v}" y2="19" stroke="#fff" stroke-opacity="${v === 60 ? .7 : .35}" stroke-width="${v === 60 ? .8 : .5}"/>`).join("");
+    const gain = dir && s.down && s.dist ? Math.max(10, Math.min(110, x + dir * s.dist)) : null;
+    const who = s.poss === g.home.id ? g.home.abbr : s.poss === g.away.id ? g.away.abbr : "";
+    const svg = `<svg viewBox="0 0 120 20" preserveAspectRatio="none" aria-hidden="true">
+      <rect x="0" y="0" width="120" height="20" rx="3" fill="#3B8A4C"/>
+      <rect x="0" y="0" width="10" height="20" fill="${col(g.away.color)}"/><rect x="110" y="0" width="10" height="20" fill="${col(g.home.color)}"/>
+      ${lines}${gain != null ? `<line x1="${gain}" y1="0" x2="${gain}" y2="20" stroke="#FFD43B" stroke-width="1.4"/>` : ""}
+      ${dir ? `<path d="M${x + dir * 3.2} 10 l${-dir * 2.6} -2.6 v5.2 z" fill="#fff"/>` : ""}
+      <ellipse cx="${x}" cy="10" rx="3.1" ry="2" fill="#7A3E12" stroke="#fff" stroke-width=".5"/></svg>`;
+    const text = s.dd ? `<b>${esc(s.dd)}</b>${s.spot ? ` at ${esc(s.spot)}` : ""}` : s.spot ? `Ball at ${esc(s.spot)}` : "Live";
+    return el("div", "fld", `<div class="ft">${who ? `<span class="who">🏈 ${esc(who)}</span>` : ""}<span>${text}</span>${s.rz ? `<span class="rz">Red zone</span>` : ""}</div>${svg}`);
+  }
+
   function teamButton(g, side, mine) {
     const t = g[side];
     const picked = mine === t.id;
@@ -930,7 +969,7 @@
     b.disabled = locked(g);
     b.setAttribute("aria-pressed", picked);
     b.innerHTML = `${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : `<span class="nologo">${esc((t.abbr || "?").slice(0, 4))}</span>`}
-      <div class="n">${t.rank ? `<div class="rk">${/^NCAA Tournament/.test(g.event || "") ? `${t.rank} SEED` : `#${t.rank}`}</div>` : ""}<div class="nm${sz}" title="${esc(t.full)}">${esc(t.name)}</div><div class="rec">${esc(t.record)}</div>${othersOn(g, t.id)}</div>
+      <div class="n">${t.rank ? `<div class="rk">${/^NCAA Tournament/.test(g.event || "") ? `${t.rank} SEED` : `#${t.rank}`}</div>` : ""}<div class="nm${sz}" title="${esc(t.full)}">${hasBall(g, t.id) ? `<span class="ball" title="Has the ball">🏈</span>` : ""}${esc(t.name)}</div><div class="rec">${esc(t.record)}</div>${othersOn(g, t.id)}</div>
       ${g.state !== "pre" ? `<div class="sc">${t.score}</div>` : ""}`;
     b.onclick = () => savePick(S.week, g.id, t.id);
     return b;
@@ -1054,6 +1093,8 @@
       m.appendChild(el("div", "at", g.neutral ? "VS" : "AT"));
       m.appendChild(teamButton(g, "home", mine));
       card.appendChild(m);
+      const fs = S.sport === "cfb" ? fieldStrip(g) : null;
+      if (fs) card.appendChild(fs);
       if (g.trophy) card.appendChild(trophyBar(g, mine));
 
       const stCls = g.state === "in" ? "live" : g.completed ? "final" : "";
