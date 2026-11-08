@@ -291,8 +291,13 @@
   /* ── recap ── */
   .recap{position:relative;background:linear-gradient(135deg,#FFF6D8,#FCE7A8);border:1px solid #F0D27A;border-radius:var(--radius);padding:12px 44px 12px 14px;margin-bottom:12px;box-shadow:var(--shadow)}
   .recap .rh{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.05em;text-transform:uppercase;color:#7A5A00}
-  .recap .rw{font-size:15px;margin-top:2px}
-  .recap .ro{font-size:12px;color:var(--ink-2);margin-top:3px}
+  .recap .rw{font-size:15px;font-weight:600;margin-top:4px;line-height:1.35}
+  .recap .rr{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+  .recap .rr span{font-size:12px;font-weight:700;background:rgba(255,255,255,.65);border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .recap .rr span.w{background:#E8B10C;color:#12211A}
+  .recap .rq{font-size:13px;margin-top:6px;line-height:1.35;color:var(--ink)}
+  .recap .rs{list-style:none;margin:10px 0 0;padding:8px 0 0;border-top:1px solid rgba(122,90,0,.2)}
+  .recap .rs li{font-size:12px;color:var(--ink-2);line-height:1.35;margin-top:4px}
   .recap .rx{position:absolute;top:4px;right:4px;width:40px;height:40px;border-radius:50%;font-size:22px;color:#7A5A00}
   /* ── pull to refresh ── */
   .ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) - 40px);z-index:45;width:40px;height:40px;border-radius:50%;background:var(--card);color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.2);display:grid;place-items:center;font-size:22px;opacity:0;transform:translate(-50%,0);pointer-events:none;transition:opacity .15s}
@@ -1347,29 +1352,211 @@
     return box;
   }
 
-  // A small card at the start of a new week: who won last week. Shows until the new week's first game is final,
-  // or until it's dismissed.
+  // ── Last week's recap: a little trash talk, then a few stats ─────────────
+  // Lines are picked at random, but the same lines every time for a given week, so everyone sees the same joke.
+  // ── BEGIN SHARED RECAP (an exact copy lives in supabase/functions/pickem-remind/index.ts) ──
+  const QUIPS = {
+    perfect: [
+      "💯 {W} went a perfect {Wr}. Somebody check {W}'s phone for a time machine.",
+      "💯 {Wr}. Not one miss. {W} would like you all to know this was \"pretty easy.\"",
+      "🔮 {W} went {Wr} and is now accepting questions about the future. Tips appreciated.",
+      "💯 A flawless {Wr} from {W}. The rest of the family has opened an investigation.",
+      "🎯 {W} went {Wr}. Perfect week. Expect to hear about this until roughly 2031.",
+    ],
+    blowout: [
+      "🚀 {W} won {N} by {M}. {Others} have requested a recount.",
+      "🧹 {W} swept {N}, {Wr}, and won by {M}. It was not close. It was barely a contest.",
+      "🏃 {W} won by {M} games. {Others} are still looking for the scoreboard.",
+      "🔥 {W} ({Wr}) won by {M}. Somebody call the fire department, this was a house fire.",
+      "📢 {W} won {N} by {M}. Please direct all complaints to {W}, who will not be listening.",
+      "🦖 {W} stomped everybody by {M}. {Others} are filing a formal protest.",
+      "👑 {Wr} and a {M}-game cushion. {W} would like a small parade. Nothing fancy.",
+    ],
+    close: [
+      "😅 {W} wins {N} by one game. Hold the parade, {W} already planned it.",
+      "📸 Photo finish! {W} takes {N} by a single game and will be explaining exactly how for days.",
+      "🤏 {W} won by one. One. Game. {W} is calling it \"a statement.\"",
+      "🍀 {W} squeaks out {N} by a game. Skill? Luck? {W} says skill. Nobody else does.",
+      "😤 {W} wins by one, which {W} insists counts the same as winning by ten. Technically true.",
+      "🎢 One game separated {W} from the pack. Somebody's still mad about one pick, and it shows.",
+      "🥇 {W} takes {N} by a nose. The nose is reportedly already in the trophy case.",
+    ],
+    normal: [
+      "🏆 {W} wins {N} at {Wr}. Please hold your applause. {W} will not.",
+      "🏆 {W} took {N} with a {Wr} week. Victory speech is expected at dinner.",
+      "🎉 {W} wins {N} ({Wr}). {Others} have been notified and are taking it about as well as you'd expect.",
+      "🏆 {N} goes to {W}, {Wr}. Somebody has to win, and this week it was, unfortunately, {W}.",
+      "😎 {W} wins {N} at {Wr} and would like everyone to know it was \"never in doubt.\"",
+      "🏅 {W} takes {N}. Cool, calm, and already bragging.",
+    ],
+    tie2: [
+      "🤝 {W} tied at {Wr}. Nobody wins, everybody argues.",
+      "⚖️ It's a tie! {W} split {N} at {Wr}. Expect a heated debate about who \"really\" won.",
+      "🤜🤛 {W} share {N} at {Wr}. Sharing is caring, and neither of them cares for it.",
+      "🪢 {W} tied at {Wr}. Rematch next week, same time, same couch.",
+      "🍰 {W} split {N} at {Wr}. Like splitting a dessert, nobody's happy with their half.",
+    ],
+    tie3: [
+      "🤷 A three-way tie at {Wr}. Nobody learned anything this week.",
+      "🫠 Everybody went {Wr}. A week so even it's honestly kind of boring.",
+      "🧑‍🤝‍🧑 Three-way tie at {Wr}. Everyone's a winner, which means nobody is.",
+      "🔁 All tied up at {Wr}. Same picks, different excuses.",
+    ],
+    last: [
+      "🐢 {L} brought up the rear at {Lr}. In fairness, {L} did pick every game. Just not correctly.",
+      "📉 {L} finished last at {Lr}. Strong effort. Wrong teams.",
+      "🪦 {Lr} for {L}. We'll say a few words at dinner.",
+      "🧊 {L} went {Lr}. Ice cold. Bring a jacket.",
+      "🙈 {L} ({Lr}) has asked that we not talk about it. So naturally, here we are.",
+      "🎲 {L} went {Lr}. Was there a coin involved? There may have been a coin involved.",
+      "🍂 {L} finished last at {Lr}. There's always next week. Probably.",
+      "🫣 {Lr} for {L}. The picks were bold. The results were not.",
+    ],
+    lastBad: [
+      "🚨 {L} went {Lr}. We're not mad, just disappointed. Okay, a little mad.",
+      "🗑️ {Lr}. {L}'s picks have been gently placed in the recycling bin.",
+      "🧯 {L} went {Lr}. Somebody check on {L}.",
+      "📺 {L} ({Lr}) is said to be \"looking into new strategies,\" such as watching the games.",
+      "🫥 {Lr} for {L}. Statistically, flipping a coin would've been an upgrade.",
+      "🐌 {L} went {Lr}. It wasn't a week. It was a blooper reel.",
+    ],
+    last2: [
+      "🫂 {L} tied for last at {Lr}. At least there's company down here.",
+      "🛋️ {L} shared the basement at {Lr}. Cozy down there.",
+      "🥉 {L} tied for last at {Lr}. Misery loves company, and it found some.",
+    ],
+    streak: [
+      "🔥 That's {S} straight weeks for {W}. At this point it's just sad for everybody else.",
+      "📈 {W} has now won {S} weeks in a row. Somebody stop {W}. Please.",
+      "🚂 {S} in a row for {W}. The train is not slowing down.",
+      "🥱 {W} wins again. That's {S} straight. Starting to get a little repetitive, honestly.",
+    ],
+    stumble: [
+      "👑 Season leader {L} finished last this week. The crown is slipping, and it's not subtle.",
+      "🍌 {L} came in leading the season and left in last. Banana peel.",
+      "😬 {L} was leading the season and then went {Lr}. Bold choice.",
+    ],
+    prize: [
+      "{I} {W} takes home {P} and will now be unbearable for weeks.",
+      "{I} {Pc} goes to {W}. Please don't make it weird, {W}.",
+      "{I} {W} wins {P}. A moment of silence for everyone else.",
+    ],
+    prizeTie: [
+      "{I} {W} have to share {P}. Custody arrangements to follow.",
+      "{I} {Pc} is split between {W}. Good luck with that.",
+    ],
+  };
+
+  function seededRng(seedStr) {
+    let h = 2166136261; for (const ch of seedStr) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    return () => { h += 0x6D2B79F5; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  const andList = a => a.length <= 1 ? (a[0] || "") : a.length === 2 ? `${a[0]} and ${a[1]}` : `${a.slice(0, -1).join(", ")} and ${a[a.length - 1]}`;
+
+  // The headline and the jab. The reminder job (supabase/functions/pickem-remind) has an exact copy of
+  // QUIPS, seededRng, andList and this function, so the notification says word for word what the card says.
+  function recapLines(P, t, label, seed) {
+    const rng = seededRng(seed), pick = pool => pool[Math.floor(rng() * pool.length)];
+    const rec = p => `${t[p].ok}–${t[p].bad}`;
+    const best = Math.max(...P.map(p => t[p].ok));
+    const won = P.filter(p => t[p].ok === best);
+    const byOk = [...P].sort((a, b) => t[b].ok - t[a].ok);
+    const lowest = Math.min(...P.map(p => t[p].ok));
+    const lastOnes = won.length === P.length ? [] : P.filter(p => t[p].ok === lowest);
+    const second = byOk.find(p => !won.includes(p));
+    const margin = second ? best - t[second].ok : 0;
+    const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, x) => v[x] ?? "");
+    const vars = { W: andList(won), Wr: rec(won[0]), N: label, M: margin, Others: andList(P.filter(p => !won.includes(p))) };
+    const kind = won.length === P.length ? "tie3" : won.length > 1 ? "tie2" : t[won[0]].bad === 0 && t[won[0]].ok >= 3 ? "perfect" : margin >= 3 ? "blowout" : margin === 1 ? "close" : "normal";
+    const lines = [fill(pick(QUIPS[kind]), vars)];
+    if (lastOnes.length) {
+      const L = lastOnes, tot = t[L[0]].ok + t[L[0]].bad;
+      const pool = L.length > 1 ? QUIPS.last2 : tot && t[L[0]].ok / tot < .4 ? QUIPS.lastBad : QUIPS.last;
+      lines.push(fill(pick(pool), { L: andList(L), Lr: rec(L[0]) }));
+    }
+    return { lines, rng, pick, won, lastOnes, rec, fill };
+  }
+
+  // ── END SHARED RECAP ──
+
   function lastWeekRecap(cur, sp, perWeek) {
-    const i = S.calendar.findIndex(w => w.n === cur), prevN = S.calendar[i - 1]?.n;
-    const pw = perWeek.find(w => w.n === prevN);
+    // This week's recap as soon as its last game is final; otherwise last week's, until this week has a final.
+    const i = S.calendar.findIndex(w => w.n === cur);
+    const cw = perWeek.find(w => w.n === cur);
+    let prevN;
+    if (cw && cw.done && cw.best > 0) prevN = cur;
+    else {
+      prevN = S.calendar[i - 1]?.n;
+      if ((S.games[cur] || []).some(g => g.completed)) return null;
+    }
+    const pi = perWeek.findIndex(w => w.n === prevN), pw = perWeek[pi];
     if (!pw || !pw.done || pw.best <= 0) return null;
-    if ((S.games[cur] || []).some(g => g.completed)) return null;
     const k = `pickem.recap.${sp}.${prevN}`;
     try { if (localStorage.getItem(k)) return null; } catch {}
-    const rec = p => `${pw.t[p].ok}–${pw.t[p].bad}`;
-    const won = C.PLAYERS.filter(p => pw.t[p].ok === pw.best);
-    const rest = C.PLAYERS.filter(p => !won.includes(p)).sort((a, b) => pw.t[b].ok - pw.t[a].ok);
-    const label = pw.occ ? `${pw.occ.icon} ${esc(pw.occ.name)}` : `Week ${prevN}`;
-    const names = won.length === 1 ? `<b>${esc(won[0])}</b> won` : `<b>${won.map(esc).join(" & ")}</b> tied`;
-    const prize = pw.occ?.prize ? ` · ${won.length === 1 ? "takes" : "share"} ${esc(pw.occ.prize)} ${pw.occ.icon}` : "";
-    const tro = (S.games[prevN] || []).filter(g => g.trophy && g.completed).map(g => {
-      const w = trophyWinners(g, prevN, sp); return w.length ? `${g.trophy.icon} ${w.map(esc).join(" & ")}` : "";
-    }).filter(Boolean);
+
+    const P = C.PLAYERS, t = pw.t;
+    const label = pw.occ ? pw.occ.name : `Week ${prevN}`;
+    const { lines, rng, pick, won, lastOnes, rec, fill } = recapLines(P, t, label, `${sp}|${prevN}`);
+    const games = (S.games[prevN] || []).filter(g => g.completed && !isVoid(g));
+
+    // bonus: prize, streak, season leader stumbling
+    if (pw.occ?.prize) lines.push(fill(pick(won.length > 1 ? QUIPS.prizeTie : QUIPS.prize), { I: pw.occ.icon, W: andList(won), P: pw.occ.prize, Pc: pw.occ.prize[0].toUpperCase() + pw.occ.prize.slice(1) }));
+    if (won.length === 1) {
+      let s = 0;
+      for (let j = pi; j >= 0; j--) { const w = perWeek[j]; if (w.done && w.best > 0 && w.t[won[0]].ok === w.best) s++; else break; }
+      if (s >= 2) lines.push(fill(pick(QUIPS.streak), { W: won[0], S: s }));
+    }
+    const before = {}; P.forEach(p => before[p] = 0);
+    perWeek.slice(0, pi).forEach(w => P.forEach(p => before[p] += w.t[p].ok));
+    const topBefore = Math.max(...P.map(p => before[p]));
+    const leaders = P.filter(p => before[p] === topBefore && topBefore > 0);
+    if (leaders.length === 1 && lastOnes.length === 1 && lastOnes[0] === leaders[0]) lines.push(fill(pick(QUIPS.stumble), { L: leaders[0], Lr: rec(leaders[0]) }));
+
+    // stats
+    const picks = S.picks[prevN] || {};
+    const pk = (g, p) => picks[key(g.id, p)];
+    const nm = (g, id) => (g.home.id === id ? g.home : g.away).name;
+    const loser = g => g.winner === g.home.id ? g.away : g.home;
+    const stats = [];
+    // biggest upset: an unranked team beating a ranked one (lowest number = biggest)
+    const ups = games.filter(g => { const w = g.winner === g.home.id ? g.home : g.away, l = loser(g); return l.rank && !w.rank && !/^NCAA Tournament/.test(g.event || ""); })
+      .sort((a, b) => loser(a).rank - loser(b).rank);
+    if (ups[0]) {
+      const g = ups[0], who = P.filter(p => pk(g, p) === g.winner);
+      stats.push(`😱 Upset of the week: ${esc(nm(g, g.winner))} over #${loser(g).rank} ${esc(loser(g).name)}. ${who.length ? `${andList(who)} called it.` : "Nobody saw it coming."}`);
+    }
+    // lone wolf: only one person picked the winner
+    const lone = games.filter(g => P.filter(p => pk(g, p) === g.winner).length === 1 && P.every(p => pk(g, p)));
+    if (lone.length) {
+      const g = lone[Math.floor(rng() * lone.length)], p = P.find(p => pk(g, p) === g.winner);
+      stats.push(`🐺 Lone wolf: only ${p} had ${esc(nm(g, g.winner))}${lone.length > 1 ? ` (plus ${lone.length - 1} more solo call${lone.length > 2 ? "s" : ""} this week)` : ""}.`);
+    }
+    // everybody missed
+    const miss = games.filter(g => P.every(p => pk(g, p) && pk(g, p) !== g.winner));
+    if (miss.length) stats.push(`🙈 Everybody missed ${miss.length === 1 ? `${esc(nm(miss[0], miss[0].winner))} over ${esc(loser(miss[0]).name)}` : `${miss.length} games`}. Group project failure.`);
+    // agreement
+    const all = games.filter(g => P.every(p => pk(g, p)));
+    const same = all.filter(g => new Set(P.map(p => pk(g, p))).size === 1).length;
+    if (all.length >= 4) stats.push(`🤝 You all picked the same team in ${same} of ${all.length} games${same === all.length ? ". Riveting stuff." : same <= all.length / 3 ? ". Lots of disagreement this week." : "."}`);
+    // blanks
+    const blanks = P.map(p => [p, games.filter(g => !pk(g, p)).length]).filter(([, n]) => n > 0);
+    if (blanks.length) stats.push(`📭 ${blanks.map(([p, n]) => `${p} left ${n} game${n > 1 ? "s" : ""} blank`).join(", ")}. Bold strategy.`);
+    // season race
+    const after = {}; P.forEach(p => after[p] = before[p] + t[p].ok);
+    const so = [...P].sort((a, b) => after[b] - after[a]);
+    if (after[so[0]] > 0) {
+      const lead = after[so[0]] - after[so[1]];
+      const newLeader = leaders.length === 1 && leaders[0] !== so[0] && lead > 0;
+      stats.push(lead === 0 ? `📊 Season: ${andList(so.filter(p => after[p] === after[so[0]]))} are tied for 1st.`
+        : `📊 Season: ${so[0]} ${newLeader ? "takes over 1st" : "leads"} by ${lead}${newLeader ? ". New sheriff in town. 🤠" : "."}`);
+    }
+
     const card = el("div", "recap", `<button type="button" class="rx" aria-label="Dismiss">×</button>
-      <div class="rh">🏆 ${label} recap</div>
-      <div class="rw">${names}, ${rec(won[0])}${prize}</div>
-      ${rest.length ? `<div class="ro">${rest.map(p => `${esc(p)} ${rec(p)}`).join(" · ")}</div>` : ""}
-      ${tro.length ? `<div class="ro">Trophy games: ${tro.join(" · ")}</div>` : ""}`);
+      <div class="rh">🏆 ${esc(label)} recap</div>
+      <div class="rw">${esc(lines[0])}</div>
+      <div class="rr">${P.map(p => `<span${won.includes(p) ? ' class="w"' : ""}>${esc(p)} ${rec(p)}</span>`).join("")}</div>
+      ${lines.slice(1).map(l => `<div class="rq">${esc(l)}</div>`).join("")}
+      ${stats.length ? `<ul class="rs">${stats.slice(0, 4).map(s => `<li>${s}</li>`).join("")}</ul>` : ""}`);
     card.querySelector(".rx").onclick = () => { try { localStorage.setItem(k, "1"); } catch {} card.remove(); };
     return card;
   }
@@ -1894,11 +2081,12 @@
 
   (async () => {
     // A tapped reminder opens e.g. ?sport=cbb&f=open: go to that sport with the Unpicked filter on.
-    const qp = new URLSearchParams(location.search), wantSport = qp.get("sport"), wantOpen = qp.get("f") === "open";
+    const qp = new URLSearchParams(location.search), wantSport = qp.get("sport"), wantOpen = qp.get("f") === "open", wantTab = qp.get("tab");
     try { S.player = await resolvePlayer(); } catch (e) { console.error(e); }
     if (HOOPS_ON && SPORTS[wantSport]) { S.sport = wantSport; try { localStorage.setItem("pickem.sport", wantSport); } catch {} }
     if (wantOpen && S.player) { DATA[S.sport].conf = "__open"; S.tab = "picks"; }
-    if (wantSport || wantOpen) history.replaceState(null, "", location.pathname);
+    if (["picks", "sheet", "standings"].includes(wantTab)) S.tab = wantTab;              // a tapped recap opens Standings
+    if (wantSport || wantOpen || wantTab) history.replaceState(null, "", location.pathname);
     if (installing() && S.player && NOTIFY_ON) N.open = true;                 // came back from the bell's set-up reload: show the steps
     else if (qp.get("install") && !installing()) history.replaceState(null, "", location.pathname);
     renderHeader();
