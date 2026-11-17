@@ -156,6 +156,12 @@
   .tcase .sh i{font-style:normal}
   .tcase .sh .emo{width:24px;height:24px;vertical-align:-4px}
   .tcase .sh em{font-style:normal;font-size:15px;color:var(--mute)}
+  .tcard .crw{font-size:13px;border-top:1px solid #EEF1EC;padding:9px 0 2px}
+  .tcard .rules{border-top:1px solid #EEF1EC;margin-top:8px;padding-top:8px;font-size:12px;color:var(--ink-2);line-height:1.4}
+  .tcard .rules>b{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
+  .tcard .rules div{display:flex;gap:8px;align-items:flex-start;margin-top:4px}
+  .tcard .rules i{font-style:normal;font-size:16px;line-height:1.2;flex:none}
+  .tcard .rules span b{color:var(--ink)}
   .tcard .rr .nm small{display:block;font-size:11px;font-weight:500;color:var(--mute);margin-top:1px}
   .brk{border-top:1px solid #EEF1EC;margin-top:2px;padding-top:10px}
   .brk summary{font-weight:700;font-size:13px;cursor:pointer;list-style:none;display:flex;justify-content:space-between}
@@ -629,18 +635,15 @@
     let winners = [], how = "", tied = [];
     if (done && best > 0) {
       winners = tied = C.PLAYERS.filter(p => t[p].ok === best);
-      if (winners.length > 1 && champion) {                      // 1st tiebreaker: picked the champion
-        const hit = winners.filter(p => champPick(p) === champion);
-        if (hit.length && hit.length < winners.length) { winners = hit; how = "on the champion pick"; }
-      }
-      if (winners.length > 1 && title && title.completed) {      // 2nd: closest total points in the title game
+      if (winners.length > 1 && title && title.completed) {      // tiebreaker: closest total points in the title game
         const total = title.home.score + title.away.score;
         const off = p => tb[key(title.id, p)] != null ? Math.abs(tb[key(title.id, p)] - total) : Infinity;
         const close = Math.min(...winners.map(off));
         if (close !== Infinity && winners.some(p => off(p) !== close)) { winners = winners.filter(p => off(p) === close); how = "on the tiebreaker"; }
       }
     }
-    return { T, week, every, listed, t, played, left, done, best, title, winners, how, tied, champId, champPick, champLocked, champion, teams };
+    const crown = champion ? C.PLAYERS.filter(p => champPick(p) === champion) : [];   // 👑 everyone who picked the champion
+    return { T, week, every, listed, t, played, left, done, best, title, winners, how, tied, champId, champPick, champLocked, champion, teams, crown };
   }
   const weekTourneys = (week, sp = "cbb") => sp !== "cbb" ? [] : TOURNEYS.map(T => tourneyStatus(T, week, sp)).filter(Boolean);
 
@@ -1239,9 +1242,9 @@
   function tourneyStrip(ts) {
     const T = ts.T, me = S.player && ts.t[S.player];
     let line;
-    if (ts.done && ts.winners.length) line = `<b class="w">${esc(listNames(ts.winners))} ${ts.winners.length > 1 ? "share" : "won"} ${esc(T.prize)}</b> at ${recStr(ts.t[ts.winners[0]])}${ts.how ? ", " + ts.how : ""}.`;
+    if (ts.done && ts.winners.length) line = `<b class="w">${T.icon} ${esc(listNames(ts.winners))}</b>${ts.how ? " (" + ts.how.replace(/^on the /, "") + ")" : ""} · <b class="w">👑 ${ts.crown.length ? esc(listNames(ts.crown)) : "nobody"}</b>`;
     else if (ts.done) line = `It's over. Nobody won ${esc(T.prize)} this time.`;
-    else line = `Most right in its ${ts.every.length} games wins <b>${esc(T.prize)}</b>. Tie: champion pick, then title-game total points.${me && (me.ok + me.bad) ? ` You're ${recStr(me)}.` : ""}`;
+    else line = `Two trophies: ${T.icon} most games right, 👑 pick the champion.${me && (me.ok + me.bad) ? ` You're ${recStr(me)}.` : ""}`;
     const s = el("button", "tstrip tz-" + T.id, `<span class="lights" aria-hidden="true"></span><i>${T.icon}</i><span class="tx"><b>${esc(T.name)}</b><small>${line}</small></span><span class="go">${ts.done ? "🏆" : esc(T.race)} ›</span>`);
     s.type = "button";
     s.onclick = () => { S.tab = "standings"; render(); scrollTo(0, 0); };
@@ -1254,7 +1257,7 @@
     const box = el("div", "champ tz-" + T.id);
     if (!ts.champLocked) {
       if (!S.player) return null;
-      box.innerHTML = `<div class="ch"><b>👑 Pick the champion</b><span>${mine ? "Saved. You can change it until the first tip." : "Who wins the whole thing? Locks at the first tip."}</span></div><div class="cg"></div>`;
+      box.innerHTML = `<div class="ch"><b>👑 Pick the champion</b><span>${mine ? "Saved. You can change it until the first tip." : "Who wins the whole tournament?"} Get it right and you win a 👑 Crown.</span></div><div class="cg"></div>`;
       const grid = box.querySelector(".cg");
       list.forEach(tm => {
         const b = el("button", "ct" + (mine === tm.id ? " on" : ""), `${tm.logo ? `<img src="${esc(tm.logo)}" alt="">` : ""}<span>${esc(tm.abbr)}</span>`);
@@ -1266,7 +1269,7 @@
       const rows = C.PLAYERS.map(p => { const id = ts.champPick(p), tm = ts.teams[id];
         const mark = ts.champion && id ? (id === ts.champion ? `<i class="ok">✓</i>` : `<i class="bad">✗</i>`) : "";
         return `<span class="cr">${esc(p)} <b>${tm ? esc(tm.name) : "no pick"}</b>${mark}</span>`; }).join("");
-      box.innerHTML = `<div class="ch"><b>👑 Champion picks</b><span>${ts.champion ? `${esc(ts.teams[ts.champion]?.name || "")} won it.` : "Locked."}</span></div><div class="crs">${rows}</div>`;
+      box.innerHTML = `<div class="ch"><b>👑 Champion picks</b><span>${ts.champion ? `${esc(ts.teams[ts.champion]?.name || "")} won it. ${ts.crown.length ? esc(listNames(ts.crown)) + (ts.crown.length > 1 ? " win" : " wins") + " a 👑 Crown." : "No Crown this time."}` : "Locked. A right pick wins a 👑 Crown."}</span></div><div class="crs">${rows}</div>`;
     }
     return box;
   }
@@ -1324,7 +1327,7 @@
       ? `<div class="jackpot${seen ? " seen" : ""}"><div class="reels" aria-hidden="true">${[0, 1, 2].map(i => `<span class="reel" style="--d:${i}"><span class="strip">${["🍒", "🔔", "🍋", "⭐", "💎", reel].join("<br>")}</span></span>`).join("")}</div><b>${ts.winners.length > 1 ? "Split pot!" : "JACKPOT!"}</b><span>${esc(listNames(ts.winners))} ${ts.winners.length > 1 ? "share" : "takes"} ${esc(T.prize)}${ts.how ? " " + ts.how : ""}</span></div>`
       : "";
     setTimeout(() => { const d = c.querySelector("details.brk"); if (d) d.ontoggle = () => { S.brkOpen = S.brkOpen || {}; S.brkOpen[T.id] = d.open; }; }, 0);
-    const c = el("div", "race tcard tz-" + T.id, `<span class="lights" aria-hidden="true"></span>${jack}<div class="rt"><b>${T.icon} ${esc(ts.done ? T.name : T.race)}</b><span>${ts.played} of ${ts.every.length} played</span></div>${rows()}<details class="brk"${S.brkOpen?.[T.id] ? " open" : ""}><summary>Bracket</summary>${tourneyRounds(ts)}</details><p>Most games right wins ${esc(T.prize)}. Tie: champion pick, then title-game total points.</p>`);
+    const c = el("div", "race tcard tz-" + T.id, `<span class="lights" aria-hidden="true"></span>${jack}<div class="rt"><b>${T.icon} ${esc(ts.done ? T.name : T.race)}</b><span>${ts.played} of ${ts.every.length} played</span></div>${rows()}<details class="brk"${S.brkOpen?.[T.id] ? " open" : ""}><summary>Bracket</summary>${tourneyRounds(ts)}</details>${ts.champion ? `<div class="crw">👑 Crown: <b>${ts.crown.length ? esc(listNames(ts.crown)) : "nobody"}</b> picked ${esc(ts.teams[ts.champion]?.name || "the champion")}</div>` : ""}<div class="rules"><b>How it works</b><div><i>${T.icon}</i><span><b>${esc(T.prize)}</b>: most ${esc(T.name)} games picked right. Tied? Closest guess of total points in the title game.</span></div><div><i>👑</i><span><b>The Crown</b>: pick the tournament champion before the first tip. Everyone who's right gets one.</span></div></div>`);
     return c;
   }
 
@@ -1766,6 +1769,7 @@
 
     // bonus: prize, streak, season leader stumbling
     if (pw.occ?.prize) lines.push(fill(pick(won.length > 1 ? QUIPS.prizeTie : QUIPS.prize), { I: pw.occ.icon, W: andList(won), P: pw.occ.prize, Pc: pw.occ.prize[0].toUpperCase() + pw.occ.prize.slice(1) }));
+    for (const ts of weekTourneys(prevN, sp)) if (ts.crown.length) lines.push(`👑 ${andList(ts.crown)} picked the ${ts.T.name} champion and ${ts.crown.length > 1 ? "take Crowns" : "takes the Crown"}.`);
     for (const ts of weekTourneys(prevN, sp)) if (ts.done && ts.winners.length)
       lines.push(`${ts.T.icon} ${andList(ts.winners)} ${ts.winners.length > 1 ? `split ${ts.T.prize} in the ${ts.T.name}` : `${ts.T.won} in the ${ts.T.name}`}, ${recStr(ts.t[ts.winners[0]])}${ts.how ? ` (${ts.how})` : ""}.`);
     if (won.length === 1) {
@@ -1846,7 +1850,7 @@
       const occ = occOf(n);
       C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) { season[p].weeksWon++; if (occ?.prize) { season[p].trophies.push(occ.icon); season[p].shelf.push({ icon: occ.icon, name: occ.name }); } } });
       (S.games[n] || []).forEach(g => trophyWinners(g, n, sp).forEach(p => { season[p].trophies.push(g.trophy.icon); season[p].shelf.push({ icon: g.trophy.icon, name: g.trophy.name }); }));   // trophy games
-      weekTourneys(n, sp).forEach(ts => { if (ts.done) ts.winners.forEach(p => { season[p].trophies.push(ts.T.icon); season[p].shelf.push({ icon: ts.T.icon, name: ts.T.prize.replace(/^The /, "") }); }); });   // tournament trophies
+      weekTourneys(n, sp).forEach(ts => { ts.crown.forEach(p => { season[p].trophies.push("👑"); season[p].shelf.push({ icon: "👑", name: `Crown (${ts.T.name})` }); }); if (ts.done) ts.winners.forEach(p => { season[p].trophies.push(ts.T.icon); season[p].shelf.push({ icon: ts.T.icon, name: ts.T.prize.replace(/^The /, "") }); }); });   // tournament trophies
       return { n, t, done, best, occ };
     });
     // Rank by wins, then fewer losses, then weeks won. Equal on all three = tied.
