@@ -109,6 +109,50 @@
   .occ i{font-style:normal;font-size:28px;line-height:1}
   .occ b{display:block;font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase;line-height:1.1}
   .occ span{font-size:12px;color:var(--ink-2)}
+  /* ── tournament games: Vegas marquee look ── */
+  .tz-pe8{--tz1:#FF2E88;--tz2:#8B5CF6;--tz3:#FFC531;--tzbg:#16061F;--tzink:#FFD84D}
+  .game.tourney{border:2px solid transparent;background:linear-gradient(var(--card),var(--card)) padding-box,linear-gradient(135deg,var(--tz1),var(--tz2) 50%,var(--tz3)) border-box;
+    box-shadow:0 0 0 1px rgba(139,92,246,.10),0 8px 22px rgba(139,92,246,.22)}
+  .tz-pe16{--tz1:#E8B10C;--tz2:#1E7A4F;--tz3:#F6D365;--tzbg:#0B3323;--tzink:#F6D365}
+  .game.tourney.tz-pe16{box-shadow:0 0 0 1px rgba(30,122,79,.12),0 8px 22px rgba(30,122,79,.22)}
+  .game.tourney.crunch{box-shadow:0 0 0 2px #E0393E,0 8px 22px rgba(224,57,62,.3)}
+  .tban,.tstrip,.tcard{position:relative}
+  .tban{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px 7px;background:var(--tzbg);color:#fff;font-size:11px;overflow:hidden}
+  .tz-pe16 .tban,.tstrip.tz-pe16,.tcard.tz-pe16 .jackpot{background:radial-gradient(circle at 20% 0,rgba(246,211,101,.18),transparent 55%),repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0 6px,transparent 6px 12px),var(--tzbg)}
+  .tban .tn{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}
+  .tban .tn i{font-style:normal;font-size:16px;line-height:1;filter:drop-shadow(0 0 6px rgba(255,216,77,.6))}
+  .tban .tn b{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--tzink);text-shadow:0 0 8px rgba(255,197,49,.55)}
+  .tban .tn em{font-style:normal;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.8);overflow:hidden;text-overflow:ellipsis}
+  .tban .tn em::before{content:"· ";color:rgba(255,255,255,.45)}
+  .tban .tp{flex:none;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.65)}
+  .tz-title .tban .tp{color:var(--tzink)}
+  .game.tz-title{border-width:3px}
+  /* marquee bulbs along the top edge */
+  .lights{position:absolute;left:0;right:0;top:0;height:4px;pointer-events:none;
+    background:radial-gradient(circle,var(--tzink) 0 1.5px,transparent 2px) 0 50%/12px 4px repeat-x;opacity:.9}
+  @media (prefers-reduced-motion:no-preference){.lights{animation:bulbs 1.2s steps(2) infinite}}
+  @keyframes bulbs{to{background-position:6px 50%}}
+  .tbk.tz-tb{background:linear-gradient(90deg,rgba(139,92,246,.10),rgba(255,46,136,.08));border-top:1px solid rgba(139,92,246,.25)}
+  .tz-pe16 .tbk.tz-tb{background:linear-gradient(90deg,rgba(30,122,79,.10),rgba(232,177,12,.10));border-top-color:rgba(30,122,79,.25)}
+  .tstrip{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;cursor:pointer;color:#fff;background:linear-gradient(135deg,#2A0B3D,var(--tzbg) 60%);border-radius:var(--radius);padding:14px 14px 12px;margin:0 0 10px;box-shadow:0 6px 18px rgba(22,6,31,.25);overflow:hidden;font:inherit}
+  .tstrip i{font-style:normal;font-size:30px;line-height:1;filter:drop-shadow(0 0 8px rgba(255,216,77,.55))}
+  .tstrip .tx{min-width:0;flex:1}
+  .tstrip b{display:block;font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.06em;text-transform:uppercase;color:var(--tzink);text-shadow:0 0 10px rgba(255,197,49,.45);line-height:1.1}
+  .tstrip small{display:block;font-size:12px;color:rgba(255,255,255,.82);margin-top:2px;line-height:1.35}
+  .tstrip small b{display:inline;font:inherit;font-weight:700;color:#fff;text-shadow:none;letter-spacing:0;text-transform:none}
+  .tstrip small b.w{color:var(--tzink)}
+  .tstrip .go{flex:none;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--tzink);white-space:nowrap}
+  .tcard{border:2px solid transparent;background:linear-gradient(var(--card),var(--card)) padding-box,linear-gradient(135deg,var(--tz1),var(--tz2) 50%,var(--tz3)) border-box;overflow:hidden;padding-top:14px}
+  .tcard .chip.won{background:var(--tz3);color:#12211A}
+  .tcard .rr{grid-template-columns:minmax(0,1fr) auto 56px}
+  .jackpot{margin:-14px -14px 10px;padding:16px 14px 12px;background:radial-gradient(circle at 50% 0,rgba(255,46,136,.35),transparent 60%),var(--tzbg);color:#fff;text-align:center}
+  .jackpot b{display:block;font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:.1em;color:var(--tzink);text-shadow:0 0 14px rgba(255,197,49,.7);margin-top:8px}
+  .jackpot>span{font-size:13px;color:rgba(255,255,255,.85)}
+  .reels{display:flex;justify-content:center;gap:8px}
+  .reel{width:48px;height:48px;border-radius:10px;background:#fff;overflow:hidden;box-shadow:inset 0 3px 8px rgba(0,0,0,.35),0 0 0 2px var(--tz3)}
+  .reel .strip{display:block;font-size:30px;line-height:48px;text-align:center;transform:translateY(-240px)}
+  @media (prefers-reduced-motion:no-preference){.reel .strip{animation:spin-reel calc(1.1s + var(--d) * .45s) cubic-bezier(.2,.7,.25,1) both}}
+  @keyframes spin-reel{0%{transform:translateY(0)}70%{transform:translateY(-252px)}100%{transform:translateY(-240px)}}
   .evt{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 12px;background:#F4F6F3;border-bottom:1px solid #EEF1EC;border-left:4px solid var(--flag);font-size:11px;color:var(--ink-2)}
   .evt .t{display:flex;align-items:baseline;min-width:0;font-weight:600;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
   .evt .t b{color:var(--ink);font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -511,7 +555,44 @@
     [/hawai/i, "🌺", "Hawaiʻi Bowl"], [/pinstripe/i, "🗽", "Pinstripe Bowl"], [/snoop|arizona bowl/i, "🚬", "Arizona Bowl"],
   ];
   const CFP_ROUNDS = [[/first round/i, 21, "CFP First Round"], [/quarterfinal/i, 22, "CFP Quarterfinals"], [/semifinal/i, 23, "CFP Semifinals"], [/national championship/i, 24, "National Championship"]];
-  const tagIcon = g => g.trophy ? g.trophy.icon : g.post ? (g.cfp ? "🏈" : "🥣") : eventIcon(g);
+  // Basketball tournaments with their own trophy. Most right in the tournament's games wins it; the
+  // championship game's total points breaks a tie. Bragging rights only: weekly and season records
+  // are counted exactly as before. Add another tournament with one line (ESPN's event name + dates).
+  const TOURNEYS = [
+    { id: "pe8",  re: /^players era 8\b/i,  name: "Players Era 8",  prize: "The Slot Machine", icon: "🎰", reels: "7️⃣", race: "Jackpot race", won: "hit the jackpot", city: "Las Vegas" },
+    { id: "pe16", re: /^players era 16\b/i, name: "Players Era 16", prize: "The Money Bag",    icon: "💰", reels: "💰", race: "Money Bag race", won: "cashed out with the Money Bag", city: "Las Vegas" },
+  ];
+  const tourneyOf = g => g && g.event ? TOURNEYS.find(t => t.re.test(g.event)) || null : null;
+  const isTitleGame = (g, T) => !!T && /- championship$/i.test(g.event || "");
+  const tagIcon = g => g.trophy ? g.trophy.icon : g.post ? (g.cfp ? "🏈" : "🥣") : tourneyOf(g)?.icon || eventIcon(g);
+
+  // Where a tournament stands for one week: everyone's record in it, and the winner once it's over.
+  function tourneyStatus(T, week, sp = "cbb") {
+    const D = DATA[sp];
+    const every = (D.all?.[week] || D.games[week] || []).filter(g => T.re.test(g.event || ""));   // includes rounds still "TBD vs TBD"
+    if (!every.length) return null;
+    const listed = (D.games[week] || []).filter(g => T.re.test(g.event || ""));
+    const picks = D.picks[week] || {}, tb = D.tb[week] || {};
+    const t = {}; C.PLAYERS.forEach(p => t[p] = { ok: 0, bad: 0 });
+    listed.forEach(g => C.PLAYERS.forEach(p => { const r = grade(g, picks[key(g.id, p)]); if (r === "ok" || r === "bad") t[p][r]++; }));
+    const played = every.filter(g => g.completed || isVoid(g)).length;
+    const left = every.length - played;
+    const done = left === 0;
+    const best = Math.max(...C.PLAYERS.map(p => t[p].ok));
+    const title = every.find(g => isTitleGame(g, T)) || null;
+    let winners = [], byTotal = false;
+    if (done && best > 0) {
+      winners = C.PLAYERS.filter(p => t[p].ok === best);
+      if (winners.length > 1 && title && title.completed) {
+        const total = title.home.score + title.away.score;
+        const off = p => tb[key(title.id, p)] != null ? Math.abs(tb[key(title.id, p)] - total) : Infinity;
+        const close = Math.min(...winners.map(off));
+        if (close !== Infinity) { winners = winners.filter(p => off(p) === close); byTotal = true; }
+      }
+    }
+    return { T, every, listed, t, played, left, done, best, title, winners, byTotal };
+  }
+  const weekTourneys = (week, sp = "cbb") => sp !== "cbb" ? [] : TOURNEYS.map(T => tourneyStatus(T, week, sp)).filter(Boolean);
 
   // Who takes a trophy game: of those who picked the winner, the closest total points.
   // Nobody picked the winner: closest total among everyone. Still level: they share it.
@@ -896,6 +977,13 @@
     rows.forEach(x => m[key(x.game_id, x.player)] = x.pick);
     D.picks[week] = m;
     if (sp === "cbb") { D.noTable = false; hoopsFilter(week); }
+    if (sp === "cbb" && (D.all[week] || []).some(g => tourneyOf(g))) {   // tournament week: title-game tiebreaker totals too
+      try {
+        const t = await sb(`tiebreakers?season=eq.${T.season}&week=eq.${week}&select=game_id,player,total`);
+        if (t.status === 404) { D.noTb = true; D.tb[week] = {}; }
+        else if (t.ok) { const tm = {}; (await t.json()).forEach(x => tm[key(x.game_id, x.player)] = x.total); D.tb[week] = tm; D.noTb = false; }
+      } catch (e) { console.warn("tiebreakers:", e.message || e); }   // never let this stop the picks from showing
+    }
     if (sp === "cfb" && (week >= 16 || D.calendar.find(w => w.n === week)?.special === FB_OCC.armynavy)) {   // trophy-game weeks: tiebreaker totals too
       const t = await sb(`tiebreakers?season=eq.${T.season}&week=eq.${week}&select=game_id,player,total`);
       if (t.status === 404) { D.noTb = true; D.tb[week] = {}; return; }
@@ -1096,6 +1184,39 @@
     return b;
   }
 
+  // ── tournament trophy: strip on My picks, race card on Standings ──────────
+  const recStr = r => `${r.ok}–${r.bad}`;
+  function tourneyStrip(ts) {
+    const T = ts.T, me = S.player && ts.t[S.player];
+    let line;
+    if (ts.done && ts.winners.length) line = `<b class="w">${esc(listNames(ts.winners))} ${ts.winners.length > 1 ? "share" : "won"} ${esc(T.prize)}</b> at ${recStr(ts.t[ts.winners[0]])}${ts.byTotal ? ", on the tiebreaker" : ""}.`;
+    else if (ts.done) line = `It's over. Nobody won ${esc(T.prize)} this time.`;
+    else line = `Most right in its ${ts.every.length} games wins <b>${esc(T.prize)}</b>. Title-game total points breaks a tie.${me && (me.ok + me.bad) ? ` You're ${recStr(me)}.` : ""}`;
+    const s = el("button", "tstrip tz-" + T.id, `<span class="lights" aria-hidden="true"></span><i>${T.icon}</i><span class="tx"><b>${esc(T.name)}</b><small>${line}</small></span><span class="go">${ts.done ? "🏆" : esc(T.race)} ›</span>`);
+    s.type = "button";
+    s.onclick = () => { S.tab = "standings"; render(); scrollTo(0, 0); };
+    return s;
+  }
+  function tourneyCard(ts) {
+    const T = ts.T, P = C.PLAYERS;
+    const leftOf = p => ts.left;   // games not yet final; anyone can still pick (or win) those
+    const order = [...P].sort((a, b) => ts.t[b].ok - ts.t[a].ok || ts.t[a].bad - ts.t[b].bad);
+    const status = p => {
+      if (ts.done) return ts.winners.includes(p) ? ["won", ts.winners.length > 1 ? "Split the pot" : "Jackpot 🏆"] : ["out", "Out"];
+      const max = ts.t[p].ok + leftOf(p), lead = ts.best;
+      if (max < lead) return ["out", "Out"];
+      if (ts.t[p].ok === lead && lead > 0) return ["lead", "Leading"];
+      return ["alive", "Still alive"];
+    };
+    const rows = order.map(p => { const [k, txt] = status(p); return `<div class="rr"><span class="nm">${esc(p)}</span><span class="chip ${k}">${txt}</span><span class="rc">${recStr(ts.t[p])}</span></div>`; }).join("");
+    const reel = T.reels;
+    const jack = ts.done && ts.winners.length
+      ? `<div class="jackpot"><div class="reels" aria-hidden="true">${[0, 1, 2].map(i => `<span class="reel" style="--d:${i}"><span class="strip">${["🍒", "🔔", "🍋", "⭐", "💎", reel].join("<br>")}</span></span>`).join("")}</div><b>${ts.winners.length > 1 ? "Split pot!" : "JACKPOT!"}</b><span>${esc(listNames(ts.winners))} ${ts.winners.length > 1 ? "share" : "takes"} ${esc(T.prize)}${ts.byTotal ? " on the tiebreaker" : ""}</span></div>`
+      : "";
+    const c = el("div", "race tcard tz-" + T.id, `<span class="lights" aria-hidden="true"></span>${jack}<div class="rt"><b>${T.icon} ${esc(ts.done ? T.name : T.race)}</b><span>${ts.played} of ${ts.every.length} played</span></div>${rows}<p>Most right in the ${esc(T.name)} wins ${esc(T.prize)}. Consolation games count. Tie: closest total points in the title game.${ts.title && !ts.done ? " Enter yours on the title game once the matchup is set." : ""}</p>`);
+    return c;
+  }
+
   function renderPicks(v) {
     const games = S.games[S.week] || [];
     const occ = occOf(S.week);
@@ -1107,6 +1228,7 @@
       v.appendChild(el("div", "occ", `<i>${occ.icon}</i><div><b>${esc(occ.name)}</b><span>${line}</span></div>`));
     }
     if (!games.length) { v.appendChild(el("div", "empty", "<b>No games yet</b>ESPN hasn't posted this week's schedule.")); return; }
+    for (const ts of weekTourneys(S.week, S.sport)) v.appendChild(tourneyStrip(ts));
 
     // ── search + conference filter (display only — never affects scoring) ──
     const CONF_NAMES = SP().confs, POWER = SP().power;
@@ -1202,6 +1324,28 @@
       return bar;
     };
 
+    // Tournament title game: the total-points tiebreaker for the tournament trophy.
+    const tourneyBar = (g, TT, mine) => {
+      const D = DATA[S.sport], tb = D.tb[S.week] || {}, myTotal = tb[key(g.id, S.player)];
+      const total = g.home.score + g.away.score;
+      let line, input = "";
+      if (D.noTb) line = "The total-points tiebreaker needs a one-time Supabase setup.";
+      else if (g.state === "pre") {
+        const val = S.tbDraft[g.id] ?? (myTotal ?? "");
+        line = myTotal != null ? "Tiebreaker saved. You can change it until tip-off." : `If you're tied for the most right in the ${esc(TT.name)}, closest total points wins.`;
+        input = `<label>Total pts<input type="number" inputmode="numeric" min="0" max="250" step="1" data-tb="${esc(g.id)}" value="${esc(val)}" aria-label="Total points tiebreaker for ${esc(TT.prize)}"></label>`;
+      } else if (!g.completed) line = `Your total: ${myTotal ?? "none"} · Live total: ${total}`;
+      else line = `Final total ${total}` + (myTotal != null ? ` · You: ${myTotal} (${Math.abs(myTotal - total)} off)` : "");
+      const bar = el("div", "tbk tz-tb", `<span class="ti">${TT.icon}</span><div class="tx"><b>${esc(TT.prize)} tiebreaker</b><small>${line}</small></div>${input}`);
+      const inp = bar.querySelector("input");
+      if (inp) {
+        inp.oninput = e => { S.tbDraft[g.id] = e.target.value; };
+        inp.onchange = e => saveTotal(S.week, g.id, e.target.value);
+        inp.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } };
+      }
+      return bar;
+    };
+
     const buildCard = (g, showDay) => {
       const mine = S.picks[S.week]?.[key(g.id, S.player)];
       const card = el("div", "game" + (g.trophy ? " trophy" : "") + (isCrunch(g) ? " crunch" : ""));
@@ -1209,7 +1353,14 @@
         const [r, u] = g.home.rank ? [g.home, g.away] : [g.away, g.home];
         card.appendChild(el("div", "upset", `<b>😱 Upset watch</b><span>${esc(u.name)} leads #${r.rank} ${esc(r.name)}</span>`));
       }
-      if (g.event) {
+      const TT = S.sport === "cbb" ? tourneyOf(g) : null;
+      if (TT) {
+        card.classList.add("tourney", "tz-" + TT.id);
+        const round = (g.event.split(" - ")[1] || "").replace(/ game$/i, "");
+        const ttl = isTitleGame(g, TT);
+        if (ttl) card.classList.add("tz-title");
+        card.appendChild(el("div", "tban", `<span class="lights" aria-hidden="true"></span><span class="tn"><i>${TT.icon}</i><b>${esc(TT.name)}</b>${round ? `<em>${esc(round)}</em>` : ""}</span><span class="tp">${ttl ? "🏆 For the " + esc(TT.prize.replace(/^The /, "")) : esc(TT.city)}</span>`));
+      } else if (g.event) {
         const [name, ...rest] = g.event.split(" - ");
         card.appendChild(el("div", "evt", `<span class="t"><i>${tagIcon(g)}</i><b>${esc(name)}</b>${rest.length ? `<em>&nbsp;· ${esc(rest.join(" · "))}</em>` : ""}</span>${g.place ? `<span class="where">${esc(g.place)}</span>` : ""}`));
       }
@@ -1221,6 +1372,7 @@
       const fs = S.sport === "cfb" ? fieldStrip(g) : null;
       if (fs) card.appendChild(fs);
       if (g.trophy) card.appendChild(trophyBar(g, mine));
+      if (TT && isTitleGame(g, TT)) card.appendChild(tourneyBar(g, TT, mine));
 
       const stCls = g.state === "in" ? "live" : g.completed ? "final" : "";
       const stTxt = `${showDay ? fmtDay(g.date).slice(0, 3) + " · " : ""}${g.state === "pre" ? (g.tbd ? "Time TBD" : fmtTime(g.date)) : esc(g.statusText)}${g.tv ? " · " + esc(g.tv) : ""}`;
@@ -1501,6 +1653,8 @@
 
     // bonus: prize, streak, season leader stumbling
     if (pw.occ?.prize) lines.push(fill(pick(won.length > 1 ? QUIPS.prizeTie : QUIPS.prize), { I: pw.occ.icon, W: andList(won), P: pw.occ.prize, Pc: pw.occ.prize[0].toUpperCase() + pw.occ.prize.slice(1) }));
+    for (const ts of weekTourneys(prevN, sp)) if (ts.done && ts.winners.length)
+      lines.push(`${ts.T.icon} ${andList(ts.winners)} ${ts.winners.length > 1 ? `split ${ts.T.prize} in the ${ts.T.name}` : `${ts.T.won} in the ${ts.T.name}`}, ${recStr(ts.t[ts.winners[0]])}${ts.byTotal ? " (on the tiebreaker)" : ""}.`);
     if (won.length === 1) {
       let s = 0;
       for (let j = pi; j >= 0; j--) { const w = perWeek[j]; if (w.done && w.best > 0 && w.t[won[0]].ok === w.best) s++; else break; }
@@ -1601,6 +1755,15 @@
     });
     const recap = lastWeekRecap(cur, sp, perWeek);
     if (recap) v.appendChild(recap);
+    if (sp === "cbb") {
+      const prevN = S.calendar[S.calendar.findIndex(w => w.n === cur) - 1]?.n;
+      const shownT = new Set();
+      for (const n of [cur, prevN]) for (const ts of weekTourneys(n, sp)) {
+        if (shownT.has(ts.T.id) || (n !== cur && !ts.done)) continue;
+        if (n !== cur && (S.games[cur] || []).some(g => g.completed)) continue;   // last week's jackpot stays up until this week gets going
+        shownT.add(ts.T.id); v.appendChild(tourneyCard(ts));
+      }
+    }
     const race = weekRace(cur, sp);
     if (race) v.appendChild(race);
     v.appendChild(pod);
