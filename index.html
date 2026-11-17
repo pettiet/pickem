@@ -134,6 +134,47 @@
   @keyframes bulbs{to{background-position:6px 50%}}
   .tbk.tz-tb{background:linear-gradient(90deg,rgba(139,92,246,.10),rgba(255,46,136,.08));border-top:1px solid rgba(139,92,246,.25)}
   .tz-pe16 .tbk.tz-tb{background:linear-gradient(90deg,rgba(30,122,79,.10),rgba(232,177,12,.10));border-top-color:rgba(30,122,79,.25)}
+  .champ{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 12px 12px;margin:0 0 10px;border:2px solid transparent;background:linear-gradient(var(--card),var(--card)) padding-box,linear-gradient(135deg,var(--tz1),var(--tz2) 50%,var(--tz3)) border-box}
+  .champ .ch b{display:block;font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:.05em;text-transform:uppercase}
+  .champ .ch span{font-size:12px;color:var(--ink-2)}
+  .champ .cg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+  .champ .ct{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px 6px;border-radius:10px;border:2px solid var(--line);background:var(--card);font:700 12px var(--body,inherit);color:var(--ink);cursor:pointer;min-width:0}
+  .champ .ct img{width:28px;height:28px;object-fit:contain}
+  .champ .ct span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .champ .ct.on{border-color:var(--tz2);background:var(--tzbg);color:var(--tzink);box-shadow:0 0 0 2px var(--tz3)}
+  .champ .crs{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px;font-size:13px}
+  .champ .cr i{font-style:normal;margin-left:4px;font-weight:800}.champ .cr i.ok{color:#1E8E4E}.champ .cr i.bad{color:#C0392B}
+  .tcard .chip.tie{background:#FDE3C8;color:#7A4A00}
+  .jackpot.seen .reel .strip{animation:none}
+  .tcase{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px 6px;margin:0 0 12px}
+  .tcase .tt{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+  .tcase .tt b{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase}
+  .tcase .tt span{font-size:12px;color:var(--mute)}
+  .tcase .sr{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;border-top:1px solid #EEF1EC}
+  .tcase .sr b{font-weight:700}
+  .tcase .sh{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px 8px;font-size:24px;line-height:1.2}
+  .tcase .sh i{font-style:normal}
+  .tcase .sh .emo{width:24px;height:24px;vertical-align:-4px}
+  .tcase .sh em{font-style:normal;font-size:15px;color:var(--mute)}
+  .tcard .rr .nm small{display:block;font-size:11px;font-weight:500;color:var(--mute);margin-top:1px}
+  .brk{border-top:1px solid #EEF1EC;margin-top:2px;padding-top:10px}
+  .brk summary{font-weight:700;font-size:13px;cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+  .brk summary::-webkit-details-marker{display:none}
+  .brk summary::after{content:"Show";color:var(--mute);font-weight:600}
+  .brk[open] summary::after{content:"Hide"}
+  .brk .bg{margin-top:12px}
+  .brk .bg.ttl{background:rgba(255,197,49,.14);border-radius:10px;margin:12px -8px 0;padding:8px}
+  .brk .bd{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:2px}
+  .brk .br{display:grid;grid-template-columns:58px 30px 22px 58px 30px minmax(0,1fr);column-gap:4px;align-items:baseline;padding:5px 0;font-size:14px;font-variant-numeric:tabular-nums}
+  .brk .tm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brk .sc{text-align:right}
+  .brk .br .sc:nth-child(2){grid-column:2}
+  .brk .br .tm:nth-child(3){grid-column:4}
+  .brk .w{font-weight:800;color:var(--ink)}
+  .brk .l{color:var(--mute)}
+  .brk .mk{display:flex;gap:5px;justify-content:flex-end;align-items:baseline;font-size:12px;font-weight:700;white-space:nowrap}
+  .brk .mk small{font-size:10px;font-weight:600;color:var(--mute)}
+  .brk .ok{color:#1E8E4E}.brk .bad,.brk .open,.brk .live{color:#C0392B}.brk .you{color:var(--ink-2);font-weight:600}
   .tstrip{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;cursor:pointer;color:#fff;background:linear-gradient(135deg,#2A0B3D,var(--tzbg) 60%);border-radius:var(--radius);padding:14px 14px 12px;margin:0 0 10px;box-shadow:0 6px 18px rgba(22,6,31,.25);overflow:hidden;font:inherit}
   .tstrip i{font-style:normal;font-size:30px;line-height:1;filter:drop-shadow(0 0 8px rgba(255,216,77,.55))}
   .tstrip .tx{min-width:0;flex:1}
@@ -580,17 +621,26 @@
     const done = left === 0;
     const best = Math.max(...C.PLAYERS.map(p => t[p].ok));
     const title = every.find(g => isTitleGame(g, T)) || null;
-    let winners = [], byTotal = false;
+    // Champion pick: made before the first tip, saved beside the picks under a made-up game id.
+    const champId = "champ-" + T.id, champPick = p => picks[key(champId, p)] || null;
+    const champLocked = every.some(g => g.state !== "pre");
+    const champion = title && title.completed ? title.winner : null;
+    const teams = {}; every.forEach(g => [g.away, g.home].forEach(x => { if (Number(x.id) > 0) teams[x.id] = x; }));
+    let winners = [], how = "", tied = [];
     if (done && best > 0) {
-      winners = C.PLAYERS.filter(p => t[p].ok === best);
-      if (winners.length > 1 && title && title.completed) {
+      winners = tied = C.PLAYERS.filter(p => t[p].ok === best);
+      if (winners.length > 1 && champion) {                      // 1st tiebreaker: picked the champion
+        const hit = winners.filter(p => champPick(p) === champion);
+        if (hit.length && hit.length < winners.length) { winners = hit; how = "on the champion pick"; }
+      }
+      if (winners.length > 1 && title && title.completed) {      // 2nd: closest total points in the title game
         const total = title.home.score + title.away.score;
         const off = p => tb[key(title.id, p)] != null ? Math.abs(tb[key(title.id, p)] - total) : Infinity;
         const close = Math.min(...winners.map(off));
-        if (close !== Infinity) { winners = winners.filter(p => off(p) === close); byTotal = true; }
+        if (close !== Infinity && winners.some(p => off(p) !== close)) { winners = winners.filter(p => off(p) === close); how = "on the tiebreaker"; }
       }
     }
-    return { T, every, listed, t, played, left, done, best, title, winners, byTotal };
+    return { T, week, every, listed, t, played, left, done, best, title, winners, how, tied, champId, champPick, champLocked, champion, teams };
   }
   const weekTourneys = (week, sp = "cbb") => sp !== "cbb" ? [] : TOURNEYS.map(T => tourneyStatus(T, week, sp)).filter(Boolean);
 
@@ -1189,31 +1239,92 @@
   function tourneyStrip(ts) {
     const T = ts.T, me = S.player && ts.t[S.player];
     let line;
-    if (ts.done && ts.winners.length) line = `<b class="w">${esc(listNames(ts.winners))} ${ts.winners.length > 1 ? "share" : "won"} ${esc(T.prize)}</b> at ${recStr(ts.t[ts.winners[0]])}${ts.byTotal ? ", on the tiebreaker" : ""}.`;
+    if (ts.done && ts.winners.length) line = `<b class="w">${esc(listNames(ts.winners))} ${ts.winners.length > 1 ? "share" : "won"} ${esc(T.prize)}</b> at ${recStr(ts.t[ts.winners[0]])}${ts.how ? ", " + ts.how : ""}.`;
     else if (ts.done) line = `It's over. Nobody won ${esc(T.prize)} this time.`;
-    else line = `Most right in its ${ts.every.length} games wins <b>${esc(T.prize)}</b>. Title-game total points breaks a tie.${me && (me.ok + me.bad) ? ` You're ${recStr(me)}.` : ""}`;
+    else line = `Most right in its ${ts.every.length} games wins <b>${esc(T.prize)}</b>. Tie: champion pick, then title-game total points.${me && (me.ok + me.bad) ? ` You're ${recStr(me)}.` : ""}`;
     const s = el("button", "tstrip tz-" + T.id, `<span class="lights" aria-hidden="true"></span><i>${T.icon}</i><span class="tx"><b>${esc(T.name)}</b><small>${line}</small></span><span class="go">${ts.done ? "🏆" : esc(T.race)} ›</span>`);
     s.type = "button";
     s.onclick = () => { S.tab = "standings"; render(); scrollTo(0, 0); };
     return s;
+  }
+  function champPicker(ts) {
+    const T = ts.T, list = Object.values(ts.teams).sort((a, b) => a.name.localeCompare(b.name));
+    if (!list.length) return null;
+    const mine = S.player ? ts.champPick(S.player) : null;
+    const box = el("div", "champ tz-" + T.id);
+    if (!ts.champLocked) {
+      if (!S.player) return null;
+      box.innerHTML = `<div class="ch"><b>👑 Pick the champion</b><span>${mine ? "Saved. You can change it until the first tip." : "Who wins the whole thing? Locks at the first tip."}</span></div><div class="cg"></div>`;
+      const grid = box.querySelector(".cg");
+      list.forEach(tm => {
+        const b = el("button", "ct" + (mine === tm.id ? " on" : ""), `${tm.logo ? `<img src="${esc(tm.logo)}" alt="">` : ""}<span>${esc(tm.abbr)}</span>`);
+        b.type = "button"; b.title = tm.full || tm.name; b.setAttribute("aria-pressed", mine === tm.id);
+        b.onclick = () => savePick(ts.week, ts.champId, tm.id);
+        grid.appendChild(b);
+      });
+    } else {
+      const rows = C.PLAYERS.map(p => { const id = ts.champPick(p), tm = ts.teams[id];
+        const mark = ts.champion && id ? (id === ts.champion ? `<i class="ok">✓</i>` : `<i class="bad">✗</i>`) : "";
+        return `<span class="cr">${esc(p)} <b>${tm ? esc(tm.name) : "no pick"}</b>${mark}</span>`; }).join("");
+      box.innerHTML = `<div class="ch"><b>👑 Champion picks</b><span>${ts.champion ? `${esc(ts.teams[ts.champion]?.name || "")} won it.` : "Locked."}</span></div><div class="crs">${rows}</div>`;
+    }
+    return box;
+  }
+  function tourneyRounds(ts) {
+    const picks = DATA.cbb.picks[ts.week] || {}, T = ts.T;
+    const games = [...ts.every].sort((a, b) => a.date - b.date);
+    const day0 = games.length ? dayKey(games[0].date) : "";
+    const last = {};   // team id → won its previous tournament game?
+    const groups = [];
+    const put = (name, row, order) => { let g = groups.find(x => x.name === name); if (!g) groups.push(g = { name, rows: [], order }); g.rows.push(row); };
+    [...new Set(games.map(g => dayKey(g.date)))].forEach(dk => {
+      const dg = games.filter(g => dayKey(g.date) === dk);
+      dg.forEach(g => {
+        const known = Number(g.home.id) > 0 && Number(g.away.id) > 0;
+        const suffix = (g.event.split(" - ")[1] || "").replace(/ game$/i, "");
+        const place = /^(third|fifth|seventh)/i.exec(suffix);
+        const group = /^championship/i.test(suffix) ? "Championship" : place ? "Place games" : suffix ? suffix + (/final$/i.test(suffix) ? "s" : "")
+          : dk === day0 ? "First round" : !known ? "Next round" : last[g.home.id] && last[g.away.id] ? "Semifinals" : last[g.home.id] === false && last[g.away.id] === false ? "Consolation" : "Next round";
+        const side = t => { const won = g.completed && g.winner === t.id, lost = g.completed && g.winner && !won;
+          return `<span class="tm${won ? " w" : lost ? " l" : ""}">${known ? esc(t.abbr) : "TBD"}</span><span class="sc${won ? " w" : lost ? " l" : ""}">${g.state !== "pre" && known ? t.score : ""}</span>`; };
+        const mine = S.player ? picks[key(g.id, S.player)] : null;
+        let mark = "";
+        if (S.player && known) {
+          if (g.completed && g.winner) mark = mine === g.winner ? `<span class="ok">✓</span>` : `<span class="bad">✗</span>`;
+          else if (g.state === "in") mark = `<span class="live">Live</span>`;
+          else mark = mine ? `<span class="you">${esc((g.home.id === mine ? g.home : g.away).abbr)}</span>` : `<span class="open">Pick</span>`;
+        }
+        const tag = place ? { third: "3rd", fifth: "5th", seventh: "7th" }[place[1].toLowerCase()] : "";
+        put(group, `<div class="br">${side(g.away)}${side(g.home)}<span class="mk">${tag ? `<small>${tag}</small>` : ""}${mark}</span></div>`,
+          group === "Championship" ? 9e15 : +g.date);
+      });
+      dg.forEach(g => { if (g.completed && g.winner) { last[g.home.id] = g.winner === g.home.id; last[g.away.id] = g.winner === g.away.id; } });
+    });
+    return groups.sort((a, b) => a.order - b.order).map(g => `<div class="bg${g.name === "Championship" ? " ttl" : ""}"><div class="bd">${esc(g.name)}</div>${g.rows.join("")}</div>`).join("");
   }
   function tourneyCard(ts) {
     const T = ts.T, P = C.PLAYERS;
     const leftOf = p => ts.left;   // games not yet final; anyone can still pick (or win) those
     const order = [...P].sort((a, b) => ts.t[b].ok - ts.t[a].ok || ts.t[a].bad - ts.t[b].bad);
     const status = p => {
-      if (ts.done) return ts.winners.includes(p) ? ["won", ts.winners.length > 1 ? "Split the pot" : "Jackpot 🏆"] : ["out", "Out"];
+      if (ts.done) return ts.winners.includes(p) ? ["won", ts.winners.length > 1 ? "Split the pot" : "Jackpot 🏆"] : ts.tied.includes(p) ? ["tie", "Lost tiebreaker"] : ["out", "Out"];
       const max = ts.t[p].ok + leftOf(p), lead = ts.best;
       if (max < lead) return ["out", "Out"];
       if (ts.t[p].ok === lead && lead > 0) return ["lead", "Leading"];
       return ["alive", "Still alive"];
     };
-    const rows = order.map(p => { const [k, txt] = status(p); return `<div class="rr"><span class="nm">${esc(p)}</span><span class="chip ${k}">${txt}</span><span class="rc">${recStr(ts.t[p])}</span></div>`; }).join("");
-    const reel = T.reels;
+    const rows = () => order.map(p => { const [k, txt] = status(p); return `<div class="rr"><span class="nm">${esc(p)}<small>${cp(p)}</small></span><span class="chip ${k}">${txt}</span><span class="rc">${recStr(ts.t[p])}</span></div>`; }).join("");
+    const reel = T.reels, seenKey = `pickem.jackpot.${T.id}.${SPORTS.cbb.season}`;
+    let seen = false; try { seen = !!localStorage.getItem(seenKey); } catch {}
+    if (ts.done && ts.winners.length && !seen) setTimeout(() => { try { localStorage.setItem(seenKey, "1"); } catch {} }, 2500);
+    const cp = p => { const id = ts.champPick(p);
+      if (!ts.champLocked) return id ? "👑 picked" : "👑 not picked yet";
+      const tm = ts.teams[id]; return `👑 ${tm ? esc(tm.abbr) : "no pick"}${ts.champion && id ? (id === ts.champion ? " ✓" : " ✗") : ""}`; };
     const jack = ts.done && ts.winners.length
-      ? `<div class="jackpot"><div class="reels" aria-hidden="true">${[0, 1, 2].map(i => `<span class="reel" style="--d:${i}"><span class="strip">${["🍒", "🔔", "🍋", "⭐", "💎", reel].join("<br>")}</span></span>`).join("")}</div><b>${ts.winners.length > 1 ? "Split pot!" : "JACKPOT!"}</b><span>${esc(listNames(ts.winners))} ${ts.winners.length > 1 ? "share" : "takes"} ${esc(T.prize)}${ts.byTotal ? " on the tiebreaker" : ""}</span></div>`
+      ? `<div class="jackpot${seen ? " seen" : ""}"><div class="reels" aria-hidden="true">${[0, 1, 2].map(i => `<span class="reel" style="--d:${i}"><span class="strip">${["🍒", "🔔", "🍋", "⭐", "💎", reel].join("<br>")}</span></span>`).join("")}</div><b>${ts.winners.length > 1 ? "Split pot!" : "JACKPOT!"}</b><span>${esc(listNames(ts.winners))} ${ts.winners.length > 1 ? "share" : "takes"} ${esc(T.prize)}${ts.how ? " " + ts.how : ""}</span></div>`
       : "";
-    const c = el("div", "race tcard tz-" + T.id, `<span class="lights" aria-hidden="true"></span>${jack}<div class="rt"><b>${T.icon} ${esc(ts.done ? T.name : T.race)}</b><span>${ts.played} of ${ts.every.length} played</span></div>${rows}<p>Most right in the ${esc(T.name)} wins ${esc(T.prize)}. Consolation games count. Tie: closest total points in the title game.${ts.title && !ts.done ? " Enter yours on the title game once the matchup is set." : ""}</p>`);
+    setTimeout(() => { const d = c.querySelector("details.brk"); if (d) d.ontoggle = () => { S.brkOpen = S.brkOpen || {}; S.brkOpen[T.id] = d.open; }; }, 0);
+    const c = el("div", "race tcard tz-" + T.id, `<span class="lights" aria-hidden="true"></span>${jack}<div class="rt"><b>${T.icon} ${esc(ts.done ? T.name : T.race)}</b><span>${ts.played} of ${ts.every.length} played</span></div>${rows()}<details class="brk"${S.brkOpen?.[T.id] ? " open" : ""}><summary>Bracket</summary>${tourneyRounds(ts)}</details><p>Most games right wins ${esc(T.prize)}. Tie: champion pick, then title-game total points.</p>`);
     return c;
   }
 
@@ -1228,7 +1339,7 @@
       v.appendChild(el("div", "occ", `<i>${occ.icon}</i><div><b>${esc(occ.name)}</b><span>${line}</span></div>`));
     }
     if (!games.length) { v.appendChild(el("div", "empty", "<b>No games yet</b>ESPN hasn't posted this week's schedule.")); return; }
-    for (const ts of weekTourneys(S.week, S.sport)) v.appendChild(tourneyStrip(ts));
+    for (const ts of weekTourneys(S.week, S.sport)) { v.appendChild(tourneyStrip(ts)); const cp = champPicker(ts); if (cp) v.appendChild(cp); }
 
     // ── search + conference filter (display only — never affects scoring) ──
     const CONF_NAMES = SP().confs, POWER = SP().power;
@@ -1334,8 +1445,10 @@
         const val = S.tbDraft[g.id] ?? (myTotal ?? "");
         line = myTotal != null ? "Tiebreaker saved. You can change it until tip-off." : `If you're tied for the most right in the ${esc(TT.name)}, closest total points wins.`;
         input = `<label>Total pts<input type="number" inputmode="numeric" min="0" max="250" step="1" data-tb="${esc(g.id)}" value="${esc(val)}" aria-label="Total points tiebreaker for ${esc(TT.prize)}"></label>`;
-      } else if (!g.completed) line = `Your total: ${myTotal ?? "none"} · Live total: ${total}`;
-      else line = `Final total ${total}` + (myTotal != null ? ` · You: ${myTotal} (${Math.abs(myTotal - total)} off)` : "");
+      } else {
+        const all = C.PLAYERS.map(p => { const v = tb[key(g.id, p)]; return `${esc(p)} ${v ?? "–"}${g.completed && v != null ? ` (${Math.abs(v - total)} off)` : ""}`; }).join(" · ");
+        line = `${g.completed ? "Final" : "Live"} total <b style="display:inline;font:inherit;font-weight:800;text-transform:none;letter-spacing:0">${total}</b> · ${all}`;
+      }
       const bar = el("div", "tbk tz-tb", `<span class="ti">${TT.icon}</span><div class="tx"><b>${esc(TT.prize)} tiebreaker</b><small>${line}</small></div>${input}`);
       const inp = bar.querySelector("input");
       if (inp) {
@@ -1654,7 +1767,7 @@
     // bonus: prize, streak, season leader stumbling
     if (pw.occ?.prize) lines.push(fill(pick(won.length > 1 ? QUIPS.prizeTie : QUIPS.prize), { I: pw.occ.icon, W: andList(won), P: pw.occ.prize, Pc: pw.occ.prize[0].toUpperCase() + pw.occ.prize.slice(1) }));
     for (const ts of weekTourneys(prevN, sp)) if (ts.done && ts.winners.length)
-      lines.push(`${ts.T.icon} ${andList(ts.winners)} ${ts.winners.length > 1 ? `split ${ts.T.prize} in the ${ts.T.name}` : `${ts.T.won} in the ${ts.T.name}`}, ${recStr(ts.t[ts.winners[0]])}${ts.byTotal ? " (on the tiebreaker)" : ""}.`);
+      lines.push(`${ts.T.icon} ${andList(ts.winners)} ${ts.winners.length > 1 ? `split ${ts.T.prize} in the ${ts.T.name}` : `${ts.T.won} in the ${ts.T.name}`}, ${recStr(ts.t[ts.winners[0]])}${ts.how ? ` (${ts.how})` : ""}.`);
     if (won.length === 1) {
       let s = 0;
       for (let j = pi; j >= 0; j--) { const w = perWeek[j]; if (w.done && w.best > 0 && w.t[won[0]].ok === w.best) s++; else break; }
@@ -1725,14 +1838,15 @@
     else await Promise.all(weeks.map(one));
     if (tok !== S.rtok) return;                              // they've moved on (other tab or other sport)
     v.innerHTML = "";
-    const season = {}; C.PLAYERS.forEach(p => season[p] = { ok: 0, bad: 0, weeksWon: 0, trophies: [] });
+    const season = {}; C.PLAYERS.forEach(p => season[p] = { ok: 0, bad: 0, weeksWon: 0, trophies: [], shelf: [] });
     const perWeek = weeks.map(n => {
       const t = tally(n);
       const done = (S.games[n] || []).length && (S.games[n] || []).every(g => g.completed || isVoid(g));
       const best = Math.max(...C.PLAYERS.map(p => t[p].ok));
       const occ = occOf(n);
-      C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) { season[p].weeksWon++; if (occ?.prize) season[p].trophies.push(occ.icon); } });
-      (S.games[n] || []).forEach(g => trophyWinners(g, n, sp).forEach(p => season[p].trophies.push(g.trophy.icon)));   // trophy games
+      C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) { season[p].weeksWon++; if (occ?.prize) { season[p].trophies.push(occ.icon); season[p].shelf.push({ icon: occ.icon, name: occ.name }); } } });
+      (S.games[n] || []).forEach(g => trophyWinners(g, n, sp).forEach(p => { season[p].trophies.push(g.trophy.icon); season[p].shelf.push({ icon: g.trophy.icon, name: g.trophy.name }); }));   // trophy games
+      weekTourneys(n, sp).forEach(ts => { if (ts.done) ts.winners.forEach(p => { season[p].trophies.push(ts.T.icon); season[p].shelf.push({ icon: ts.T.icon, name: ts.T.prize.replace(/^The /, "") }); }); });   // tournament trophies
       return { n, t, done, best, occ };
     });
     // Rank by wins, then fewer losses, then weeks won. Equal on all three = tied.
@@ -1767,6 +1881,18 @@
     const race = weekRace(cur, sp);
     if (race) v.appendChild(race);
     v.appendChild(pod);
+    {   // 🏆 Trophy case: everything each person has won this season
+      const any = C.PLAYERS.some(p => season[p].shelf.length);
+      const upNext = sp === "cbb" ? weekTourneys(cur, sp).filter(ts => !ts.done).map(ts => ts.T.icon) : [];
+      const curOcc = occOf(cur); if (curOcc?.prize && !perWeek.find(w => w.n === cur)?.done) upNext.push(curOcc.icon);
+      if (any || upNext.length) {
+        const rows = [...C.PLAYERS].sort((a, b) => season[b].shelf.length - season[a].shelf.length).map(p => {
+          const sh = season[p].shelf;
+          return `<div class="sr"><b>${esc(p)}</b><span class="sh">${sh.length ? sh.map(x => `<i title="${esc(x.name)}" aria-label="${esc(x.name)}">${x.icon}</i>`).join("") : `<em>–</em>`}</span></div>`;
+        }).join("");
+        v.appendChild(el("div", "tcase", `<div class="tt"><b>Trophy case</b>${upNext.length ? `<span>Up for grabs: ${upNext.join(" ")}</span>` : ""}</div>${rows}`));
+      }
+    }
     const tb = el("table", "wk");
     tb.innerHTML = `<thead><tr><th>Week</th>${C.PLAYERS.map(p => `<th>${esc(p)}</th>`).join("")}</tr></thead>`;
     const body = el("tbody");
