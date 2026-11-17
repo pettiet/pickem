@@ -833,7 +833,9 @@
       const dayStart = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
       const s0 = dayStart(P.start || new Date(C.SEASON, 11, 13));
       const mon = new Date(+s0 + ((8 - s0.getDay()) % 7) * 864e5);   // first Monday on or after the postseason start
-      const list = (j.events || []).map(ev => normalize(ev, null, true));
+      // ESPN lists the bowls weeks ahead with a placeholder date (Jan 31, 1993) until the real schedule is set.
+      // A game dated before the postseason starts isn't really scheduled yet, so leave it out until it has a date.
+      const list = (j.events || []).map(ev => normalize(ev, null, true)).filter(g => +g.date >= +s0 - 7 * 864e5 && +g.date < +s0 + 120 * 864e5);
       list.forEach(g => {
         if (g.cfp && g.round) g.wk = g.round;
         else g.wk = 16 + Math.max(0, Math.min(3, Math.floor((dayStart(g.date) - mon) / (7 * 864e5))));
