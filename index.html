@@ -854,6 +854,25 @@
     try { return await P.pending; } finally { P.pending = null; }
   }
 
+  // Football rankings: ESPN's game feed can carry last week's numbers for days after a new poll comes out,
+  // so read the current AP Top 25 directly and use it for every game played after that poll was released.
+  // Earlier games keep the ranking they were played under. Display only: no pick or result depends on it.
+  const POLL = { at: 0, date: 0, rank: null };
+  async function loadPoll() {
+    if (Date.now() - POLL.at < 30 * 60000) return;
+    POLL.at = Date.now();
+    try {
+      const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 5000);
+      const r = await fetch(ESPN.replace(/scoreboard$/, "rankings"), { signal: ctl.signal }); clearTimeout(tm);
+      if (!r.ok) return;
+      const ap = ((await r.json()).rankings || []).find(x => x.type === "ap");
+      const date = ap && Date.parse(ap.date), rank = {};
+      (ap?.ranks || []).forEach(x => { if (x.current >= 1 && x.current <= 25 && x.team?.id) rank[String(x.team.id)] = x.current; });
+      if (date && Object.keys(rank).length >= 20) { POLL.date = date; POLL.rank = rank; }
+    } catch (e) { console.warn("rankings:", e.message || e); }   // keep whatever the game feed says
+  }
+  const applyPoll = games => { if (POLL.rank) games.forEach(g => { if (+g.date >= POLL.date) [g.home, g.away].forEach(t => { t.rank = POLL.rank[t.id] || null; }); }); return games; };
+
   async function loadWeek(n, force, sp = S.sport) {
     if (sp === "cbb") return loadHoopsWeek(n, force);
     const D = DATA.cfb;
@@ -861,14 +880,15 @@
       const stale = Date.now() - (D.fetchedAt[n] || 0) > 120000;
       if (D.games[n] && !stale && !force) return D.games[n];
       const list = await loadPost(force || stale);
-      D.games[n] = list.filter(g => g.wk === n).sort((a, b) => a.date - b.date);
+      await loadPoll();
+      D.games[n] = applyPoll(list.filter(g => g.wk === n)).sort((a, b) => a.date - b.date);
       D.fetchedAt[n] = Date.now();
       return D.games[n];
     }
     const stale = Date.now() - (D.fetchedAt[n] || 0) > 120000;
     if (D.games[n] && !stale && !force) return D.games[n];
     const url = `${ESPN}?groups=${C.ESPN_GROUP}&seasontype=2&week=${dbWeek(n, "cfb")}&dates=${C.SEASON}&limit=500`;
-    const r = await fetch(url);
+    const [r] = await Promise.all([fetch(url), loadPoll()]);
     if (!r.ok) throw new Error("ESPN " + r.status);
     const j = await r.json();
     if (!D.calendar.length) {
@@ -889,7 +909,7 @@
     let evs = (j.events || []).map(ev => normalize(ev));
     if (n === 0) evs = evs.filter(g => g.date < WEEK0_END);
     else if (n === 1 && D.calendar[0]?.n === 0) evs = evs.filter(g => g.date >= WEEK0_END);
-    D.games[n] = evs.sort((a, b) => a.date - b.date);
+    D.games[n] = applyPoll(evs).sort((a, b) => a.date - b.date);
     // Army-Navy week is a single game, so it's a trophy game with the total-points tiebreaker.
     if (D.calendar.find(w => w.n === n)?.special === FB_OCC.armynavy)
       D.games[n].forEach(g => { if (D.games[n].length === 1 || [g.home.abbr, g.away.abbr].some(a => /^(ARMY|NAVY)$/i.test(a))) g.trophy = { icon: "🎖️", name: "Army-Navy" }; });
