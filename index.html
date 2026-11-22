@@ -1915,8 +1915,11 @@
   async function renderStandings(v) {
     v.appendChild(el("div", "empty", "Adding up the season…"));
     const sp = S.sport, tok = S.rtok;
-    const cur = currentWeek();
-    const weeks = S.calendar.slice(0, S.calendar.findIndex(w => w.n === cur) + 1).map(w => w.n);
+    // "now" is the week in progress. "cur" is the week being looked at: its tournaments, race and trophies show here.
+    // Season totals always run through whichever of the two is later.
+    const now = currentWeek(), ix = n => S.calendar.findIndex(w => w.n === n);
+    const cur = ix(S.week) >= 0 ? S.week : now;
+    const weeks = S.calendar.slice(0, Math.max(ix(now), ix(cur)) + 1).map(w => w.n);
     const one = async n => { await loadWeek(n, false, sp); if (!DATA[sp].picks[n]) await loadPicks(n, sp); };
     if (sp === "cbb") { for (let i = 0; i < weeks.length; i += 3) await Promise.all(weeks.slice(i, i + 3).map(one)); }   // a few weeks at a time — each is 7 requests
     else await Promise.all(weeks.map(one));
@@ -1951,12 +1954,12 @@
       pod.appendChild(el("div", "pl" + (lead ? " lead" : ""),
         `${label ? `<div class="crown">${label}</div>` : ""}<div class="name">${esc(p)}</div><div class="rec">${s.ok}–${s.bad}</div><div class="sub">${pct}% · ${s.weeksWon} week${s.weeksWon === 1 ? "" : "s"} won${!lead && back ? ` · ${back} back` : ""}</div>${s.trophies.length ? `<div class="case" aria-label="Trophies won">${s.trophies.join(" ")}</div>` : ""}`));
     });
-    const recap = lastWeekRecap(cur, sp, perWeek);
+    const recap = cur === now ? lastWeekRecap(now, sp, perWeek) : null;
     if (recap) v.appendChild(recap);
     if (sp === "cbb") {
       const prevN = S.calendar[S.calendar.findIndex(w => w.n === cur) - 1]?.n;
       const shownT = new Set();
-      for (const n of [cur, prevN]) for (const ts of weekTourneys(n, sp)) {
+      for (const n of (cur === now ? [cur, prevN] : [cur])) for (const ts of weekTourneys(n, sp)) {
         if (shownT.has(ts.T.id) || (n !== cur && !ts.done)) continue;
         if (n !== cur && (S.games[cur] || []).some(g => g.completed)) continue;   // last week's jackpot stays up until this week gets going
         shownT.add(ts.T.id); v.appendChild(tourneyCard(ts));
