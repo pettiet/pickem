@@ -129,7 +129,32 @@
   .game.tourney.tz-atl{box-shadow:0 0 0 1px rgba(34,211,238,.14),0 8px 22px rgba(11,60,140,.28)}
   .tz-atl .tban,.tstrip.tz-atl,.tcard.tz-atl .jackpot{background:radial-gradient(circle at 12% 120%,rgba(34,211,238,.35),transparent 55%),radial-gradient(circle at 85% -40%,rgba(230,193,90,.28),transparent 50%),linear-gradient(180deg,#0B3C8C,#061A3A)}
   .tz-atl .lights{top:0;bottom:auto;height:40px;opacity:.28;background:radial-gradient(circle,transparent 0 2px,#A5F3FC 2.4px 3px,transparent 3.4px) 6px 0/46px 22px,radial-gradient(circle,transparent 0 1px,#A5F3FC 1.3px 1.8px,transparent 2.2px) 28px 9px/38px 26px}
-  .tcard.tz-atl>.lights{display:none}
+  .tz-atl .jackpot .lights{height:100%}
+  /* race cards on Standings: themed header, tinted body, thicker frame */
+  .race.tcard{border-width:3px}
+  .tcard.tz-pe8{background:linear-gradient(180deg,var(--card) 45%,#F6EEFB) padding-box,linear-gradient(135deg,var(--tz1),var(--tz2) 50%,var(--tz3)) border-box}
+  .tcard.tz-pe16{background:linear-gradient(180deg,var(--card) 45%,#EEF6EA) padding-box,linear-gradient(135deg,var(--tz1),var(--tz2) 50%,var(--tz3)) border-box}
+  .tcard.tz-maui{background:linear-gradient(180deg,var(--card) 45%,#FFF1E6) padding-box,linear-gradient(135deg,var(--tz1),var(--tz2) 50%,var(--tz3)) border-box}
+  .tcard.tz-atl{background:linear-gradient(180deg,var(--card) 45%,#E6F5FB) padding-box,linear-gradient(135deg,var(--tz1),var(--tz2) 50%,var(--tz3)) border-box}
+  .tcard .jackpot{position:relative;overflow:hidden}
+  .jackpot.thero{padding-bottom:14px}
+  .jackpot.thero b{font-size:27px;letter-spacing:.07em;text-transform:uppercase;margin-top:6px}
+  .thero .deco{font-size:24px}
+  .thero .deco .big{font-size:46px}
+  .thero .pbar{height:6px;border-radius:3px;background:rgba(255,255,255,.22);margin:10px 8px 0;overflow:hidden}
+  .thero .pbar i{display:block;height:100%;border-radius:3px;background:var(--tzink);min-width:6px}
+  .tz-maui .thero .pbar i{background:#fff}
+  .tz-atl .thero .pbar i{background:#E6C15A}
+  @media (prefers-reduced-motion:no-preference){
+    .thero .deco span{animation:bob 4s ease-in-out infinite;animation-delay:calc(var(--d) * -.6s)}
+    .thero .deco .big{animation:bob 4s ease-in-out infinite}
+  }
+  @keyframes bob{50%{transform:translateY(-5px)}}
+  .tcard.tz-pe8 .chip.lead{background:#F1E4FB;color:#6B21A8}
+  .tcard.tz-pe16 .chip.lead{background:#E0F0DE;color:#1E7A4F}
+  .tcard.tz-maui .chip.lead{background:#FFE1EA;color:#B3134A}
+  .tcard.tz-atl .chip.lead{background:#DFF3FA;color:#0B3C8C}
+  .tcard.tz-atl .jackpot.thero b{font-size:27px;letter-spacing:.07em}
   .tcard.tz-atl .jackpot b{font-size:23px;letter-spacing:.08em}
   .tcard.tz-atl .jackpot{position:relative;overflow:hidden}
   .tz-atl .tban .tn b,.tstrip.tz-atl b,.tz-atl .jackpot b{color:#E6C15A;text-shadow:0 0 10px rgba(34,211,238,.55)}
@@ -652,9 +677,9 @@
   const MEDAL = { icon: "🥇", name: "The Champion Medal" };   // the standard prize for picking a tournament's champion
   const TOURNEYS = [
     { id: "pe8",  re: /^players era 8\b/i,  name: "Players Era 8",  prize: "The Slot Machine", icon: "🎰", reels: "7️⃣", race: "Jackpot race", won: "hit the jackpot", city: "Las Vegas", short: "Era 8",
-      shout: "JACKPOT!", split: "Split pot!", chip: "Jackpot 🏆", champ: { icon: "👑", name: "The Crown" } },
+      shout: "JACKPOT!", split: "Split pot!", chip: "Jackpot 🏆", hero: ["🎲", "🃏", "🎰", "🃏", "🎲"], champ: { icon: "👑", name: "The Crown" } },
     { id: "pe16", re: /^players era 16\b/i, name: "Players Era 16", prize: "The Money Bag",    icon: "💰", reels: "💰", race: "Money Bag race", won: "cashed out with the Money Bag", city: "Las Vegas", short: "Era 16",
-      shout: "CASHED OUT!", split: "Split the bag!", chip: "Money Bag 🏆", champ: MEDAL },
+      shout: "CASHED OUT!", split: "Split the bag!", chip: "Money Bag 🏆", hero: ["💵", "🪙", "💰", "🪙", "💵"], champ: MEDAL },
     { id: "maui", re: /maui invitational/i, name: "Maui Invitational", prize: "The Maui Flower", icon: "🌺", race: "Aloha race", won: "won the Maui Flower", city: "Maui", short: "Maui",
       shout: "ALOHA!", split: "Shared lei!", chip: "Aloha 🏆", deco: ["🌴", "🌊", "🌺", "🌊", "🌴"], champ: MEDAL },
     { id: "atl",  re: /^battle 4 atlantis\b/i, name: "Battle 4 Atlantis", prize: "The Trident", icon: "🔱", race: "Trident race", won: "raised the Trident", city: "Bahamas", short: "Atlantis",
@@ -1402,12 +1427,15 @@
       if (!ts.champLocked) return id ? `${CI} picked` : `${CI} not picked yet`;
       const tm = ts.teams[id]; return `${CI} ${tm ? esc(tm.abbr) : "no pick"}${ts.champion && id ? (id === ts.champion ? " ✓" : " ✗") : ""}`; };
     const jack = ts.done && ts.winners.length
-      ? `<div class="jackpot${seen ? " seen" : ""}">${T.deco
+      ? `<div class="jackpot${seen ? " seen" : ""}"><span class="lights" aria-hidden="true"></span>${T.deco
         ? `<div class="deco" aria-hidden="true">${T.deco.map((x, i) => `<span style="--d:${i}"${i === 2 ? ' class="big"' : ""}>${x}</span>`).join("")}</div>`
         : `<div class="reels" aria-hidden="true">${[0, 1, 2].map(i => `<span class="reel" style="--d:${i}"><span class="strip">${["🍒", "🔔", "🍋", "⭐", "💎", reel].join("<br>")}</span></span>`).join("")}</div>`}<b>${ts.winners.length > 1 ? T.split : T.shout}</b><span>${esc(listNames(ts.winners))} ${ts.winners.length > 1 ? "share" : "takes"} ${esc(T.prize)}${ts.how ? " " + ts.how : ""}</span></div>`
       : "";
     setTimeout(() => { const d = c.querySelector("details.brk"); if (d) d.ontoggle = () => { S.brkOpen = S.brkOpen || {}; S.brkOpen[T.id] = d.open; }; }, 0);
-    const c = el("div", "race tcard tz-" + T.id, `<span class="lights" aria-hidden="true"></span>${jack}<div class="rt"><b>${T.icon} ${esc(ts.done ? T.name : T.race)}</b><span>${ts.played} of ${ts.every.length} played</span></div>${rows()}<details class="brk"${S.brkOpen?.[T.id] ? " open" : ""}><summary>${T.last ? "Games" : "Bracket"}</summary>${tourneyRounds(ts)}</details>${ts.champion ? `<div class="crw">${T.champ.icon} ${esc(T.champ.name.replace(/^The /, ""))}: <b>${ts.crown.length ? esc(listNames(ts.crown)) : "nobody"}</b> picked ${esc(ts.teams[ts.champion]?.name || "the champion")}</div>` : ""}<div class="rules"><b>How it works</b><div><i>${T.icon}</i><span><b>${esc(T.prize)}</b>: most ${esc(T.name)} games picked right. Tied? Closest guess of total points in ${T.last ? "the tournament's last game" : "the title game"}. Still tied? You share it.</span></div>${T.champ ? `<div><i>${T.champ.icon}</i><span><b>${esc(T.champ.name)}</b>: pick the tournament champion before the first tip. Everyone who's right gets one.</span></div>` : ""}</div>`);
+    // Before it's decided: a themed header with the race name and how far along the tournament is.
+    const heroIcons = T.hero || T.deco || [T.icon];
+    const hero = `<div class="jackpot thero"><span class="lights" aria-hidden="true"></span><div class="deco" aria-hidden="true">${heroIcons.map((x, i) => `<span style="--d:${i}"${i === (heroIcons.length >> 1) ? ' class="big"' : ""}>${x}</span>`).join("")}</div><b>${esc(T.race)}</b><span>${esc(T.name)} · ${esc(T.city)} · ${ts.played} of ${ts.every.length} played</span><div class="pbar"><i style="width:${Math.round(100 * ts.played / ts.every.length)}%"></i></div></div>`;
+    const c = el("div", "race tcard tz-" + T.id, `${jack ? jack + `<div class="rt"><b>${T.icon} ${esc(T.name)}</b><span>${ts.played} of ${ts.every.length} played</span></div>` : hero}${rows()}<details class="brk"${S.brkOpen?.[T.id] ? " open" : ""}><summary>${T.last ? "Games" : "Bracket"}</summary>${tourneyRounds(ts)}</details>${ts.champion ? `<div class="crw">${T.champ.icon} ${esc(T.champ.name.replace(/^The /, ""))}: <b>${ts.crown.length ? esc(listNames(ts.crown)) : "nobody"}</b> picked ${esc(ts.teams[ts.champion]?.name || "the champion")}</div>` : ""}<div class="rules"><b>How it works</b><div><i>${T.icon}</i><span><b>${esc(T.prize)}</b>: most ${esc(T.name)} games picked right. Tied? Closest guess of total points in ${T.last ? "the tournament's last game" : "the title game"}. Still tied? You share it.</span></div>${T.champ ? `<div><i>${T.champ.icon}</i><span><b>${esc(T.champ.name)}</b>: pick the tournament champion before the first tip. Everyone who's right gets one.</span></div>` : ""}</div>`);
     return c;
   }
 
