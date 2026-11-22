@@ -1934,7 +1934,8 @@
       C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) { season[p].weeksWon++; if (occ?.prize) { season[p].trophies.push(occ.icon); season[p].shelf.push({ icon: occ.icon, name: occ.name, tag: occ.name.replace(/ (Week|Hoops)$/i, "") }); } } });
       (S.games[n] || []).forEach(g => trophyWinners(g, n, sp).forEach(p => { season[p].trophies.push(g.trophy.icon); season[p].shelf.push({ icon: g.trophy.icon, name: g.trophy.name, tag: g.trophy.name.replace(/ Bowl$/i, "") }); }));   // trophy games
       weekTourneys(n, sp).forEach(ts => { ts.crown.forEach(p => { season[p].trophies.push(ts.T.champ.icon); season[p].shelf.push({ icon: ts.T.champ.icon, name: `Picked the ${ts.T.name} champion`, tag: ts.T.short || ts.T.name }); }); if (ts.done) ts.winners.forEach(p => { season[p].trophies.push(ts.T.icon); season[p].shelf.push({ icon: ts.T.icon, name: `Most ${ts.T.name} games right`, tag: ts.T.short || ts.T.name }); }); });   // tournament trophies
-      return { n, t, done, best, occ };
+      const started = (S.games[n] || []).some(g => g.state !== "pre");
+      return { n, t, done, best, occ, started };
     });
     // Rank by wins, then fewer losses, then weeks won. Equal on all three = tied.
     const rankKey = p => [season[p].ok, -season[p].bad, season[p].weeksWon];
@@ -1983,10 +1984,10 @@
     const tb = el("table", "wk");
     tb.innerHTML = `<thead><tr><th>Week</th>${C.PLAYERS.map(p => `<th>${esc(p)}</th>`).join("")}</tr></thead>`;
     const body = el("tbody");
-    perWeek.slice().reverse().forEach(({ n, t, done, best, occ }) => {
+    perWeek.slice().reverse().forEach(({ n, t, done, best, occ, started }) => {
       const tr = el("tr");
-      tr.appendChild(el("td", "w", `${occ ? `${occ.icon} ${esc(occ.name)}` : `Week ${n}`}${done ? "" : ` <small style="color:var(--mute)">· in progress</small>`}`));
-      C.PLAYERS.forEach(p => tr.appendChild(el("td", done && t[p].ok === best && best > 0 ? "best" : "", t[p].picked ? `${t[p].ok}–${t[p].bad}${occ?.prize && done && t[p].ok === best && best > 0 ? " " + occ.icon : ""}` : "—")));
+      tr.appendChild(el("td", "w", `${occ ? `${occ.icon} ${esc(occ.name)}` : `Week ${n}`}${done ? "" : ` <small style="color:var(--mute)">· ${started ? "in progress" : "not started"}</small>`}`));
+      C.PLAYERS.forEach(p => tr.appendChild(el("td", done && t[p].ok === best && best > 0 ? "best" : "", started && t[p].picked ? `${t[p].ok}–${t[p].bad}${occ?.prize && done && t[p].ok === best && best > 0 ? " " + occ.icon : ""}` : "—")));
       body.appendChild(tr);
     });
     tb.appendChild(body);
