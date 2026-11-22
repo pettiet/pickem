@@ -1733,50 +1733,82 @@
   // ── BEGIN SHARED RECAP (an exact copy lives in supabase/functions/pickem-remind/index.ts) ──
   const QUIPS = {
     perfect: [
-      "💯 {W} went a perfect {Wr}. Somebody check {W}'s phone for a time machine.",
-      "💯 {Wr}. Not one miss. {W} would like you all to know this was \"pretty easy.\"",
-      "🔮 {W} went {Wr} and is now accepting questions about the future. Tips appreciated.",
+      "💯 {W} went {Wr}. Perfect week. No cap, that's generational.",
+      "💯 {Wr}. Zero misses. {W} was HIM this week. Or her. Either way, respect.",
+      "🔮 {W} went {Wr} and is now accepting questions about the future.",
+      "🎯 {W} went a perfect {Wr}. Absolute cinema.",
+      "🐐 {Wr} for {W}. GOAT behavior. Everyone else, take notes.",
       "💯 A flawless {Wr} from {W}. The rest of the family has opened an investigation.",
+      "🧠 {W} went {Wr}. Big brain. Huge. Needs its own zip code.",
+      "🔥 {Wr}. {W} was locked in all week. Everybody else was on airplane mode.",
+      "👀 {W} went {Wr}. That's sus. Somebody check {W}'s search history.",
+      "🎮 {W} just speedran {N}. {Wr}, no misses, new world record.",
       "🎯 {W} went {Wr}. Perfect week. Expect to hear about this until roughly 2031.",
     ],
+    perfect_cfb: ["🏈 {W} went {Wr}. Undefeated. Put {W} in the playoff.", "🏈 A perfect {Wr} for {W}. Somebody dump the Gatorade."],
+    perfect_cbb: ["🏀 {W} went {Wr}. Perfect from the field. Could not miss.", "🏀 {Wr} for {W}. Heat check passed. Still on fire."],
     blowout: [
-      "🚀 {W} won {N} by {M}. {Others} have requested a recount.",
-      "🧹 {W} swept {N}, {Wr}, and won by {M}. It was not close. It was barely a contest.",
-      "🏃 {W} won by {M} games. {Others} are still looking for the scoreboard.",
-      "🔥 {W} ({Wr}) won by {M}. Somebody call the fire department, this was a house fire.",
-      "📢 {W} won {N} by {M}. Please direct all complaints to {W}, who will not be listening.",
+      "🚀 {W} won {N} by {M}. {Others} got cooked.",
+      "🧹 {W} swept {N} at {Wr} and won by {M}. That wasn't a contest. That was a tutorial.",
+      "📢 {W} won {N} by {M}. {Others} have been ratioed.",
       "🦖 {W} stomped everybody by {M}. {Others} are filing a formal protest.",
       "👑 {Wr} and a {M}-game cushion. {W} would like a small parade. Nothing fancy.",
+      "🍳 {W} cooked. {Wr}, won by {M}. {Others} were the ingredients.",
+      "😤 {W} won {N} by {M}. Diff. Massive diff.",
+      "🏃 {W} won by {M} games. {Others} are still loading.",
+      "🔥 {W} ({Wr}) won by {M}. Somebody check on {Others}.",
+      "🎤 {W} by {M}. Mic drop. {Others}, your L is in the mail.",
+      "💪 {W} went {Wr} and won by {M}. Built different.",
+      "📉 {Others} lost {N} to {W} by {M}. Skill issue.",
     ],
+    blowout_cfb: ["🏈 {W} won {N} by {M}. That's a mercy rule. Running clock.", "🏈 {W} by {M}. {Others} got run off the field."],
+    blowout_cbb: ["🏀 {W} won {N} by {M}. {Others} got put on a poster.", "🏀 {W} by {M}. Starters sat the whole second half."],
     close: [
       "😅 {W} wins {N} by one game. Hold the parade, {W} already planned it.",
-      "📸 Photo finish! {W} takes {N} by a single game and will be explaining exactly how for days.",
+      "📸 Photo finish! {W} takes {N} by a single game.",
       "🤏 {W} won by one. One. Game. {W} is calling it \"a statement.\"",
       "🍀 {W} squeaks out {N} by a game. Skill? Luck? {W} says skill. Nobody else does.",
       "😤 {W} wins by one, which {W} insists counts the same as winning by ten. Technically true.",
-      "🎢 One game separated {W} from the pack. Somebody's still mad about one pick, and it shows.",
-      "🥇 {W} takes {N} by a nose. The nose is reportedly already in the trophy case.",
+      "🥇 {W} takes {N} by a nose. A W is a W.",
+      "😮‍💨 {W} survived {N} by one game. Clutch gene confirmed.",
+      "🎢 One game. That's the whole margin. {Others} will be thinking about one pick all week.",
+      "🧊 {W} by one. Ice in the veins, or just lucky. We may never know.",
+      "👀 {W} wins {N} by a single pick. {Others} were THIS close. Unlucky. Unfortunate. Hilarious.",
     ],
+    close_cfb: ["🏈 {W} wins {N} by one. Walk-off field goal energy.", "🏈 {W} takes {N} by one game. Won it on fourth and goal."],
+    close_cbb: ["🏀 {W} wins {N} by one. Buzzer beater.", "🏀 {W} takes {N} by a single game. Hit the free throws when it mattered."],
     normal: [
       "🏆 {W} wins {N} at {Wr}. Please hold your applause. {W} will not.",
       "🏆 {W} took {N} with a {Wr} week. Victory speech is expected at dinner.",
-      "🎉 {W} wins {N} ({Wr}). {Others} have been notified and are taking it about as well as you'd expect.",
-      "🏆 {N} goes to {W}, {Wr}. Somebody has to win, and this week it was, unfortunately, {W}.",
+      "🎉 {W} wins {N} ({Wr}). {Others} are taking it about as well as you'd expect.",
       "😎 {W} wins {N} at {Wr} and would like everyone to know it was \"never in doubt.\"",
       "🏅 {W} takes {N}. Cool, calm, and already bragging.",
+      "🏆 {N} goes to {W}, {Wr}. W secured.",
+      "💅 {W} wins {N} at {Wr}. Light work.",
+      "🫡 {W} takes {N} at {Wr}. {Others} can hold this L.",
+      "📈 {W} wins {N} ({Wr}). Aura: up. {Others}: down bad.",
+      "🎯 {W} was locked in. {Wr}, {N} secured, group chat notified.",
+      "🧃 {W} wins {N} at {Wr}. Sipping juice, unbothered.",
     ],
+    normal_cfb: ["🏈 {W} wins {N} at {Wr}. Somebody get {W} a Heisman pose.", "🏈 {W} took {N} ({Wr}). Touchdown. Extra point. Celebration penalty."],
+    normal_cbb: ["🏀 {W} wins {N} at {Wr}. Nothing but net.", "🏀 {W} took {N} ({Wr}). Splash."],
     tie2: [
       "🤝 {W} tied at {Wr}. Nobody wins, everybody argues.",
       "⚖️ It's a tie! {W} split {N} at {Wr}. Expect a heated debate about who \"really\" won.",
       "🤜🤛 {W} share {N} at {Wr}. Sharing is caring, and neither of them cares for it.",
       "🪢 {W} tied at {Wr}. Rematch next week, same time, same couch.",
       "🍰 {W} split {N} at {Wr}. Like splitting a dessert, nobody's happy with their half.",
+      "👯 {W} both went {Wr}. Co-champs. Both will claim they carried.",
+      "🤨 {W} tied {N} at {Wr}. A tie is just a W with an asterisk.",
+      "🥊 {W} finished dead even at {Wr}. Run it back.",
     ],
     tie3: [
       "🤷 A three-way tie at {Wr}. Nobody learned anything this week.",
       "🫠 Everybody went {Wr}. A week so even it's honestly kind of boring.",
       "🧑‍🤝‍🧑 Three-way tie at {Wr}. Everyone's a winner, which means nobody is.",
       "🔁 All tied up at {Wr}. Same picks, different excuses.",
+      "🤖 Everybody went {Wr}. Did you all copy the same homework?",
+      "😐 Three-way tie at {Wr}. Mid. All of you. Collectively mid.",
     ],
     last: [
       "🐢 {L} brought up the rear at {Lr}. In fairness, {L} did pick every game. Just not correctly.",
@@ -1787,7 +1819,16 @@
       "🎲 {L} went {Lr}. Was there a coin involved? There may have been a coin involved.",
       "🍂 {L} finished last at {Lr}. There's always next week. Probably.",
       "🫣 {Lr} for {L}. The picks were bold. The results were not.",
+      "💀 {L} went {Lr}. Took the L, then took a couple more for the road.",
+      "🤡 {L} finished last at {Lr}. The picks were giving random.",
+      "📵 {L} went {Lr}. Was {L} even watching the same sport?",
+      "🧢 {L} said \"I got this.\" {L} went {Lr}. That was cap.",
+      "🌱 {L} at {Lr}. Time to touch grass and reset.",
+      "🫥 {L} went {Lr}. NPC energy this week.",
+      "⬇️ {L} finished last at {Lr}. Down bad. Thoughts and prayers.",
     ],
+    last_cfb: ["🏈 {L} went {Lr}. Fumbled the bag.", "🏈 {L} finished last at {Lr}. Time to punt."],
+    last_cbb: ["🏀 {L} went {Lr}. Airball.", "🏀 {L} finished last at {Lr}. Got crossed up and fell over."],
     lastBad: [
       "🚨 {L} went {Lr}. We're not mad, just disappointed. Okay, a little mad.",
       "🗑️ {Lr}. {L}'s picks have been gently placed in the recycling bin.",
@@ -1795,31 +1836,50 @@
       "📺 {L} ({Lr}) is said to be \"looking into new strategies,\" such as watching the games.",
       "🫥 {Lr} for {L}. Statistically, flipping a coin would've been an upgrade.",
       "🐌 {L} went {Lr}. It wasn't a week. It was a blooper reel.",
+      "💀 {L} went {Lr}. Cooked. Burnt. Scraped off the pan.",
+      "🚑 {Lr} for {L}. That's not a slump. That's a skill issue.",
+      "🪙 {L} went {Lr}. A coin flip has more aura.",
+      "📉 {L} at {Lr}. Fraud watch has been activated.",
+      "😵 {L} went {Lr}. Caught in 4K picking the wrong team. Repeatedly.",
+      "🫠 {Lr} for {L}. Negative aura. We didn't know it went that low.",
     ],
+    lastBad_cfb: ["🏈 {L} went {Lr}. That's a pick-six, and not the good kind.", "🏈 {Lr} for {L}. Three and out, all week long."],
+    lastBad_cbb: ["🏀 {L} went {Lr}. Bricks. So many bricks.", "🏀 {Lr} for {L}. Shooting 0 for the week from the logo."],
     last2: [
       "🫂 {L} tied for last at {Lr}. At least there's company down here.",
       "🛋️ {L} shared the basement at {Lr}. Cozy down there.",
       "🥉 {L} tied for last at {Lr}. Misery loves company, and it found some.",
+      "🤝 {L} both went {Lr}. Matching L's. Cute.",
+      "👬 {L} tied at the bottom, {Lr}. A group project where nobody did the work.",
+      "📉 {L} at {Lr}. Certified down bad, as a team.",
     ],
     streak: [
       "🔥 That's {S} straight weeks for {W}. At this point it's just sad for everybody else.",
       "📈 {W} has now won {S} weeks in a row. Somebody stop {W}. Please.",
       "🚂 {S} in a row for {W}. The train is not slowing down.",
       "🥱 {W} wins again. That's {S} straight. Starting to get a little repetitive, honestly.",
+      "🐐 {S} straight for {W}. Dynasty behavior.",
+      "📺 {W} again. {S} in a row. This is a rerun at this point.",
+      "🔒 {S} straight weeks for {W}. Locked in. The rest of you are locked out.",
     ],
     stumble: [
       "👑 Season leader {L} finished last this week. The crown is slipping, and it's not subtle.",
       "🍌 {L} came in leading the season and left in last. Banana peel.",
       "😬 {L} was leading the season and then went {Lr}. Bold choice.",
+      "🚨 {L} came in leading the season and went {Lr}. Fraud watch.",
+      "🫠 Season leader {L} finished last. The aura took a hit.",
     ],
     prize: [
       "{I} {W} takes home {P} and will now be unbearable for weeks.",
       "{I} {Pc} goes to {W}. Please don't make it weird, {W}.",
       "{I} {W} wins {P}. A moment of silence for everyone else.",
+      "{I} {W} secured {P}. Massive W.",
+      "{I} {Pc} belongs to {W} now. Bragging rights: unlocked.",
     ],
     prizeTie: [
       "{I} {W} have to share {P}. Custody arrangements to follow.",
       "{I} {Pc} is split between {W}. Good luck with that.",
+      "{I} {W} are co-parenting {P}. Weekends and holidays, alternating.",
     ],
   };
 
@@ -1844,16 +1904,45 @@
     const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, x) => v[x] ?? "");
     const vars = { W: andList(won), Wr: rec(won[0]), N: label, M: margin, Others: andList(P.filter(p => !won.includes(p))) };
     const kind = won.length === P.length ? "tie3" : won.length > 1 ? "tie2" : t[won[0]].bad === 0 && t[won[0]].ok >= 3 ? "perfect" : margin >= 3 ? "blowout" : margin === 1 ? "close" : "normal";
-    const lines = [fill(pick(QUIPS[kind]), vars)];
+    const sport = String(seed).split("|")[0];                                   // "cfb" or "cbb": adds that sport's own lines to the pool
+    const pool = k => (QUIPS[k] || []).concat(QUIPS[k + "_" + sport] || []);
+    const lines = [fill(pick(pool(kind)), vars)];
     if (lastOnes.length) {
       const L = lastOnes, tot = t[L[0]].ok + t[L[0]].bad;
-      const pool = L.length > 1 ? QUIPS.last2 : tot && t[L[0]].ok / tot < .4 ? QUIPS.lastBad : QUIPS.last;
-      lines.push(fill(pick(pool), { L: andList(L), Lr: rec(L[0]) }));
+      const jab = L.length > 1 ? "last2" : tot && t[L[0]].ok / tot < .4 ? "lastBad" : "last";
+      lines.push(fill(pick(pool(jab)), { L: andList(L), Lr: rec(L[0]) }));
     }
     return { lines, rng, pick, won, lastOnes, rec, fill };
   }
 
   // ── END SHARED RECAP ──
+
+  // Tournament lines for the recap card (the notification keeps to the headline and the jab).
+  const TQUIPS = {
+    win: [
+      "{I} {W} {won} at the {T}, {R}.",
+      "{I} {W} took {P} at the {T}, going {R}. Aura +1000.",
+      "{I} {W} ran the {T} at {R} and grabbed {P}. Main character energy.",
+      "{I} {W} went {R} at the {T}. Trophy secured. W.",
+      "{I} The {T} belongs to {W}: {R}, and {P} for the trophy case.",
+      "{I} {W} at the {T}: {R}. Locked in from the first tip.",
+    ],
+    split: [
+      "{I} {W} split {P} at the {T}, {R} each. Co-parenting a trophy.",
+      "{I} {W} share {P} at the {T} ({R}). One trophy, two egos.",
+    ],
+    how: [" Won it on the tiebreaker, which still counts.", " Needed the tiebreaker. A W is a W.", " It came down to the tiebreaker. Clutch."],
+    medal: [
+      "{C} {W} called {X} to win the {T} before it started. Certified ball knower.",
+      "{C} {W} picked {X} to win the {T}. Saw it coming a mile away.",
+      "{C} {W} had {X} winning the {T} from day one. Never doubted. Okay, maybe a little.",
+      "{C} {W} said {X} would win the {T}. {X} won the {T}. Ball knowledge.",
+    ],
+    noMedal: [
+      "{C} Nobody picked {X} to win the {T}. Zero ball knowledge, all three of you.",
+      "{C} {X} won the {T} and not one of you saw it coming. No medal. Embarrassing.",
+    ],
+  };
 
   function lastWeekRecap(cur, sp, perWeek) {
     // This week's recap as soon as its last game is final; otherwise last week's, until this week has a final.
@@ -1877,9 +1966,15 @@
 
     // bonus: prize, streak, season leader stumbling
     if (pw.occ?.prize) lines.push(fill(pick(won.length > 1 ? QUIPS.prizeTie : QUIPS.prize), { I: pw.occ.icon, W: andList(won), P: pw.occ.prize, Pc: pw.occ.prize[0].toUpperCase() + pw.occ.prize.slice(1) }));
-    for (const ts of weekTourneys(prevN, sp)) if (ts.crown.length) lines.push(`${ts.T.champ.icon} ${andList(ts.crown)} picked the ${ts.T.name} champion and ${ts.crown.length > 1 ? "each take" : "takes"} ${ts.T.champ.name.replace(/^The /, "the ")}.`);
-    for (const ts of weekTourneys(prevN, sp)) if (ts.done && ts.winners.length)
-      lines.push(`${ts.T.icon} ${andList(ts.winners)} ${ts.winners.length > 1 ? `split ${ts.T.prize} in the ${ts.T.name}` : `${ts.T.won} in the ${ts.T.name}`}, ${recStr(ts.t[ts.winners[0]])}${ts.how ? ` (${ts.how})` : ""}.`);
+    // tournaments decided that week
+    for (const ts of weekTourneys(prevN, sp)) {
+      const T = ts.T, pz = T.prize.replace(/^The /, "the ");
+      if (ts.done && ts.winners.length) {
+        const v = { I: T.icon, W: andList(ts.winners), T: T.name, P: pz, R: recStr(ts.t[ts.winners[0]]), won: T.won };
+        lines.push(fill(pick(ts.winners.length > 1 ? TQUIPS.split : TQUIPS.win), v) + (ts.how ? pick(TQUIPS.how) : ""));
+      }
+      if (T.champ && ts.champion) lines.push(fill(pick(ts.crown.length ? TQUIPS.medal : TQUIPS.noMedal), { C: T.champ.icon, W: andList(ts.crown), T: T.name, X: ts.teams[ts.champion]?.name || "the champion" }));
+    }
     if (won.length === 1) {
       let s = 0;
       for (let j = pi; j >= 0; j--) { const w = perWeek[j]; if (w.done && w.best > 0 && w.t[won[0]].ok === w.best) s++; else break; }
