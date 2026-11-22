@@ -1933,7 +1933,7 @@
       const occ = occOf(n);
       C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) { season[p].weeksWon++; if (occ?.prize) { season[p].trophies.push(occ.icon); season[p].shelf.push({ icon: occ.icon, name: occ.name, tag: occ.name.replace(/ (Week|Hoops)$/i, "") }); } } });
       (S.games[n] || []).forEach(g => trophyWinners(g, n, sp).forEach(p => { season[p].trophies.push(g.trophy.icon); season[p].shelf.push({ icon: g.trophy.icon, name: g.trophy.name, tag: g.trophy.name.replace(/ Bowl$/i, "") }); }));   // trophy games
-      weekTourneys(n, sp).forEach(ts => { ts.crown.forEach(p => { season[p].trophies.push(ts.T.champ.icon); season[p].shelf.push({ icon: ts.T.champ.icon, name: `Picked the ${ts.T.name} champion`, tag: ts.T.short || ts.T.name }); }); if (ts.done) ts.winners.forEach(p => { season[p].trophies.push(ts.T.icon); season[p].shelf.push({ icon: ts.T.icon, name: `Most ${ts.T.name} games right`, tag: ts.T.short || ts.T.name }); }); });   // tournament trophies
+      weekTourneys(n, sp).forEach(ts => { ts.crown.forEach(p => { season[p].trophies.push(ts.T.champ.icon); season[p].shelf.push({ icon: ts.T.champ.icon, name: `Picked the ${ts.T.name} champion`, tag: ts.T.short || ts.T.name, champ: true }); }); if (ts.done) ts.winners.forEach(p => { season[p].trophies.push(ts.T.icon); season[p].shelf.push({ icon: ts.T.icon, name: `Most ${ts.T.name} games right`, tag: ts.T.short || ts.T.name }); }); });   // tournament trophies
       const started = (S.games[n] || []).some(g => g.state !== "pre");
       return { n, t, done, best, occ, started };
     });
@@ -1976,9 +1976,9 @@
       if (any || upNext.length) {
         const rows = [...C.PLAYERS].sort((a, b) => season[b].shelf.length - season[a].shelf.length).map(p => {
           const sh = season[p].shelf;
-          return `<div class="sr"><b>${esc(p)}</b><span class="sh">${sh.length ? sh.map(x => `<i title="${esc(x.name)}" aria-label="${esc(x.name)}">${x.icon}${x.icon === MEDAL.icon ? `<small>${esc(x.tag || "")}</small>` : ""}</i>`).join("") : `<em>–</em>`}</span></div>`;
+          return `<div class="sr"><b>${esc(p)}</b><span class="sh">${sh.length ? sh.map(x => `<i title="${esc(x.name)}" aria-label="${esc(x.name)}">${x.icon}${x.champ ? `<small>${esc(x.tag || "")}</small>` : ""}</i>`).join("") : `<em>–</em>`}</span></div>`;
         }).join("");
-        v.appendChild(el("div", "tcase", `<div class="tt"><b>Trophy case</b>${upNext.length ? `<span>Up for grabs: ${upNext.join(" ")}</span>` : ""}</div>${rows}${sp === "cbb" ? `<p>🥇 = picked that tournament's champion.</p>` : ""}`));
+        v.appendChild(el("div", "tcase", `<div class="tt"><b>Trophy case</b>${upNext.length ? `<span>Up for grabs: ${upNext.join(" ")}</span>` : ""}</div>${rows}${sp === "cbb" ? `<p>🥇 and 👑 = picked that tournament's champion.</p>` : ""}`));
       }
     }
     const tb = el("table", "wk");
