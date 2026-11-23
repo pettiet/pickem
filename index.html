@@ -2034,11 +2034,34 @@
     upsetT: ["😱 {U} knocked off #{K} {D} at the {T}. {Who}", "🚨 Upset alert at the {T}: {U} over #{K} {D}. {Who}"],
     cinderella: ["🪄 {X} won the {T} without a number next to its name. Cinderella story.", "👠 Unranked {X} cut down the nets at the {T}. Nobody's bracket survived that."],
     solo: ["🐺 Only {P} had {X} in the {T} title game. Called their shot.", "☝️ {P} was the only one on {X} in the {T} final. Ball knowledge."],
+    sock: [
+      "🧦 {P} went home with zero of the {K} trophies this week. Please accept this sock. Thanks for playing.",
+      "🧦 {K} trophies up for grabs and {P} got none of them. The Participation Sock has found a home.",
+      "🧦 {P} won nothing. Not one trophy out of {K}. Here's a sock. Don't spend it all in one place.",
+      "🧦 The Participation Sock goes to {P}. {K} chances, zero trophies, one sock.",
+      "🧦 {P}: 0 for {K} on trophies. That's a skill issue, but here's a sock for showing up.",
+    ],
     noMedal: [
       "{C} Nobody picked {X} to win the {T}. Zero ball knowledge, all three of you.",
       "{C} {X} won the {T} and not one of you saw it coming. No medal. Embarrassing.",
     ],
   };
+
+  // 🧦 The Participation Sock: Feast Week has a pile of trophies, so anyone who ends that week without a single one
+  // (the Turkey, a tournament trophy, or a champion medal; a shared trophy counts) gets a sock. Decided only once the
+  // whole week and every tournament in it are finished.
+  const SOCK = { icon: "🧦", name: "The Participation Sock", week: "Feast Week" };
+  const sockCount = (n, sp) => 1 + weekTourneys(n, sp).reduce((k, ts) => k + 1 + (ts.T.champ ? 1 : 0), 0);   // trophies on offer that week
+  function sockWinners(n, sp) {
+    if (sp !== "cbb" || occOf(n)?.name !== SOCK.week) return [];
+    const games = DATA[sp].games[n] || [], ts = weekTourneys(n, sp);
+    if (!games.length || !games.every(g => g.completed || isVoid(g)) || ts.some(x => !x.done)) return [];
+    const t = tally(n), best = Math.max(...C.PLAYERS.map(p => t[p].ok)), has = new Set();
+    if (best > 0) C.PLAYERS.forEach(p => { if (t[p].ok === best) has.add(p); });
+    ts.forEach(x => { x.winners.forEach(p => has.add(p)); x.crown.forEach(p => has.add(p)); });
+    games.forEach(g => trophyWinners(g, n, sp).forEach(p => has.add(p)));
+    return C.PLAYERS.filter(p => !has.has(p));
+  }
 
   function lastWeekRecap(cur, sp, perWeek) {
     // This week's recap as soon as its last game is final; otherwise last week's, until this week has a final.
@@ -2094,6 +2117,7 @@
         facts.slice(0, weekTourneys(prevN, sp).length > 1 ? 1 : 2).forEach(f => { if (f.game) toldUpsets.add(f.game); lines.push(String(f)); });
       }
     }
+    { const socks = sockWinners(prevN, sp); if (socks.length) lines.push(fill(pick(TQUIPS.sock), { P: andList(socks), K: sockCount(prevN, sp) })); }
     if (won.length === 1) {
       let s = 0;
       for (let j = pi; j >= 0; j--) { const w = perWeek[j]; if (w.done && w.best > 0 && w.t[won[0]].ok === w.best) s++; else break; }
@@ -2176,6 +2200,7 @@
       C.PLAYERS.forEach(p => { season[p].ok += t[p].ok; season[p].bad += t[p].bad; if (done && t[p].ok === best && best > 0) { season[p].weeksWon++; if (occ?.prize) { season[p].trophies.push(occ.icon); season[p].shelf.push({ icon: occ.icon, name: occ.name, tag: occ.name.replace(/ (Week|Hoops)$/i, "") }); } } });
       (S.games[n] || []).forEach(g => trophyWinners(g, n, sp).forEach(p => { season[p].trophies.push(g.trophy.icon); season[p].shelf.push({ icon: g.trophy.icon, name: g.trophy.name, tag: g.trophy.name.replace(/ Bowl$/i, "") }); }));   // trophy games
       weekTourneys(n, sp).forEach(ts => { ts.crown.forEach(p => { season[p].trophies.push(ts.T.champ.icon); season[p].shelf.push({ icon: ts.T.champ.icon, name: `Picked the ${ts.T.name} champion`, tag: ts.T.short || ts.T.name, champ: true }); }); if (ts.done) ts.winners.forEach(p => { season[p].trophies.push(ts.T.icon); season[p].shelf.push({ icon: ts.T.icon, name: `Most ${ts.T.name} games right`, tag: ts.T.short || ts.T.name }); }); });   // tournament trophies
+      sockWinners(n, sp).forEach(p => { season[p].trophies.push(SOCK.icon); season[p].shelf.push({ icon: SOCK.icon, name: `${SOCK.name}: no trophies in ${SOCK.week}`, tag: "Feast", champ: true }); });
       const started = (S.games[n] || []).some(g => g.state !== "pre");
       return { n, t, done, best, occ, started };
     });
@@ -2220,7 +2245,7 @@
           const sh = season[p].shelf;
           return `<div class="sr"><b>${esc(p)}</b><span class="sh">${sh.length ? sh.map(x => `<i title="${esc(x.name)}" aria-label="${esc(x.name)}">${x.icon}${x.champ ? `<small>${esc(x.tag || "")}</small>` : ""}</i>`).join("") : `<em>–</em>`}</span></div>`;
         }).join("");
-        v.appendChild(el("div", "tcase", `<div class="tt"><b>Trophy case</b>${upNext.length ? `<span>Up for grabs: ${upNext.join(" ")}</span>` : ""}</div>${rows}${sp === "cbb" ? `<p>🥇 and 👑 = picked that tournament's champion.</p>` : ""}`));
+        v.appendChild(el("div", "tcase", `<div class="tt"><b>Trophy case</b>${upNext.length ? `<span>Up for grabs: ${upNext.join(" ")}</span>` : ""}</div>${rows}${sp === "cbb" ? `<p>🥇 and 👑 = picked that tournament's champion.${occOf(cur)?.name === SOCK.week || C.PLAYERS.some(p => season[p].shelf.some(x => x.icon === SOCK.icon)) ? ` ${SOCK.icon} = won none of Feast Week's ${sockCount(occOf(cur)?.name === SOCK.week ? cur : (S.calendar.find(w => w.special?.name === SOCK.week)?.n ?? cur), sp)} trophies.` : ""}</p>` : ""}`));
       }
     }
     const tb = el("table", "wk");
